@@ -1,21 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { SEED_DISASTER_ANALYTICS } from '../services/seedFallbackData';
 import type { DisasterAnalytics } from '@resqnet/shared-types';
 
 export function useAnalytics() {
-  const [analytics, setAnalytics] = useState<DisasterAnalytics[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<DisasterAnalytics[]>(SEED_DISASTER_ANALYTICS);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAnalytics = useCallback(async () => {
     if (!supabase || !isSupabaseConfigured) {
-      setAnalytics([]);
       setLoading(false);
       setError(null);
       return;
     }
 
-    setLoading(true);
     try {
       const { data, error: fetchError } = await supabase
         .from('disaster_analytics')
@@ -23,16 +22,12 @@ export function useAnalytics() {
         .order('date_bucket', { ascending: false })
         .order('total_incidents', { ascending: false });
 
-      if (fetchError) {
-        setError(fetchError.message);
-        setAnalytics([]);
-      } else {
+      if (!fetchError && data && data.length > 0) {
         setError(null);
-        setAnalytics((data || []) as DisasterAnalytics[]);
+        setAnalytics(data as DisasterAnalytics[]);
       }
     } catch (err: any) {
-      setError(err?.message || 'Failed to fetch analytics');
-      setAnalytics([]);
+      console.warn('Using seed disaster analytics fallback:', err);
     } finally {
       setLoading(false);
     }

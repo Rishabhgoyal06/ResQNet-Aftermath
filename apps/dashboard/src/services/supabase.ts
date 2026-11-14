@@ -34,7 +34,17 @@ export const SUPABASE_ANON_KEY =
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+        },
+      },
+    })
   : null;
 
 export function saveSupabaseConfig(url: string, anon: string) {

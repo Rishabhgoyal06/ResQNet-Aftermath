@@ -64,6 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(async ({ data: { session } }) => {
         if (session?.user) {
           await fetchProfile(session.user.id);
+        } else {
+          // Clear any stale local auth tokens so PostgREST queries use the valid anon key
+          supabase?.auth.signOut({ scope: 'local' }).catch(() => {});
         }
       })
       .catch((err) => {

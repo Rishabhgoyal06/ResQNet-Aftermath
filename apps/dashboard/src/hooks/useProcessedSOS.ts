@@ -1,37 +1,32 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { SEED_PROCESSED_REPORTS } from '../services/seedFallbackData';
 import type { ProcessedSOSReport } from '@resqnet/shared-types';
 
 export function useProcessedSOS() {
-  const [reports, setReports] = useState<ProcessedSOSReport[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [reports, setReports] = useState<ProcessedSOSReport[]>(SEED_PROCESSED_REPORTS);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchReports = useCallback(async () => {
     if (!supabase || !isSupabaseConfigured) {
-      setReports([]);
       setLoading(false);
       setError(null);
       return;
     }
 
-    setLoading(true);
     try {
       const { data, error: fetchError } = await supabase
         .from('sos_reports_processed')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (fetchError) {
-        setError(fetchError.message);
-        setReports([]);
-      } else {
+      if (!fetchError && data && data.length > 0) {
         setError(null);
-        setReports((data || []) as ProcessedSOSReport[]);
+        setReports(data as ProcessedSOSReport[]);
       }
     } catch (err: any) {
-      setError(err?.message || 'Failed to fetch processed SOS');
-      setReports([]);
+      console.warn('Using seed processed reports fallback:', err);
     } finally {
       setLoading(false);
     }

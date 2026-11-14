@@ -112,12 +112,18 @@ export default function HeatmapView({ reports, style, className }: HeatmapViewPr
       >
         <MapController onMap={setMapRef} />
         {baseLayer === 'dark' && (
-          <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            subdomains="abcd"
-            attribution='&copy; OpenStreetMap contributors &copy; CARTO'
-            className="map-tiles map-tiles--base"
-          />
+          <>
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+              attribution='&copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
+              className="map-tiles map-tiles--base"
+            />
+            <TileLayer
+              url="https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
+              attribution=" "
+              className="map-tiles map-tiles--labels"
+            />
+          </>
         )}
         {baseLayer === 'streets' && (
           <TileLayer
