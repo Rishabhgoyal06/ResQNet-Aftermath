@@ -199,24 +199,47 @@ export default function RotatingEarthGlobe({ size = 480, className = '' }: Rotat
     // Load Earth Texture
     const texture = gl.createTexture();
     const textureImage = new Image();
-    textureImage.crossOrigin = 'anonymous';
-    textureImage.src = '/earth-globe.jpg';
 
-    // Temporary 1x1 placeholder while image loads
+    // Procedural Fallback Pattern (so rotation is ALWAYS visible even if image takes time to load)
+    const initCanvas = document.createElement('canvas');
+    initCanvas.width = 512;
+    initCanvas.height = 256;
+    const ictx = initCanvas.getContext('2d');
+    if (ictx) {
+      ictx.fillStyle = '#0a1a12';
+      ictx.fillRect(0, 0, 512, 256);
+      ictx.strokeStyle = '#224a30';
+      ictx.lineWidth = 1;
+      for (let x = 0; x < 512; x += 32) {
+        ictx.beginPath();
+        ictx.moveTo(x, 0);
+        ictx.lineTo(x, 256);
+        ictx.stroke();
+      }
+      for (let y = 0; y < 256; y += 32) {
+        ictx.beginPath();
+        ictx.moveTo(0, y);
+        ictx.lineTo(512, y);
+        ictx.stroke();
+      }
+      // Green continent outlines
+      ictx.fillStyle = '#2f6341';
+      ictx.beginPath();
+      ictx.arc(260, 100, 38, 0, Math.PI * 2);
+      ictx.fill();
+      ictx.beginPath();
+      ictx.arc(140, 90, 48, 0, Math.PI * 2);
+      ictx.fill();
+    }
+
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA,
-      1,
-      1,
-      0,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      new Uint8Array([10, 28, 45, 255])
-    );
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, initCanvas);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-    textureImage.onload = () => {
+    const uploadHighResTexture = () => {
       if (!gl) return;
       gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -243,6 +266,12 @@ export default function RotatingEarthGlobe({ size = 480, className = '' }: Rotat
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     };
+
+    textureImage.onload = uploadHighResTexture;
+    textureImage.src = '/earth-globe.jpg';
+    if (textureImage.complete) {
+      uploadHighResTexture();
+    }
 
     gl.enable(gl.DEPTH_TEST);
     gl.viewport(0, 0, size, size);

@@ -8,12 +8,33 @@ import './MapStyles.css';
 
 function AutoCenter({ points, follow }: { points: [number, number][]; follow: boolean }) {
   const map = useMap();
+  const initializedRef = useRef(false);
+
   useEffect(() => {
-    if (!follow) return;
-    if (points.length === 0) return;
-    const bounds = L.latLngBounds(points);
-    map.fitBounds(bounds.pad(0.25), { animate: true });
+    if (!follow || points.length === 0) return;
+
+    // Filter points strictly to the Indian Subcontinent bounds (lat: 6 to 38, lng: 66 to 98)
+    const validPoints = points.filter(([lat, lng]) => {
+      const nLat = Number(lat);
+      const nLng = Number(lng);
+      return !isNaN(nLat) && !isNaN(nLng) && nLat >= 6 && nLat <= 38 && nLng >= 66 && nLng <= 98;
+    });
+
+    if (validPoints.length === 0) return;
+
+    try {
+      const bounds = L.latLngBounds(validPoints);
+      if (!initializedRef.current) {
+        initializedRef.current = true;
+        map.fitBounds(bounds.pad(0.12), { maxZoom: 10, animate: false });
+      } else {
+        map.fitBounds(bounds.pad(0.12), { maxZoom: 10, animate: true, duration: 0.5 });
+      }
+    } catch (e) {
+      console.warn('AutoCenter fitBounds error:', e);
+    }
   }, [follow, map, points]);
+
   return null;
 }
 
@@ -161,8 +182,10 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
   return (
     <div className={`map-shell ${className || ''}`} style={{ width: '100%', height: '100%', ...style }}>
       <MapContainer
-        center={[28.6139, 77.209]}
-        zoom={11}
+        center={[22.5, 78.9]}
+        zoom={5}
+        minZoom={4}
+        maxZoom={18}
         style={{ width: '100%', height: '100%' }}
         zoomControl={false}
       >
@@ -212,16 +235,16 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
         <AutoCenter points={plottedPoints} follow={follow} />
                 {plottedReports.map((item) => {
           if (item.type === 'cluster') {
-            const radius = Math.min(22, 10 + item.count * 2);
+            const radius = Math.min(18, 12 + Math.floor(item.count * 1.5));
             return (
               <CircleMarker
                 key={`cluster-${item.clusterKey}`}
                 center={[item.lat, item.lng]}
                 radius={radius}
                 pathOptions={{
-                  color: '#7dd3fc',
-                  fillColor: '#0ea5e9',
-                  fillOpacity: 0.55,
+                  color: '#a7c9ab',
+                  fillColor: '#12261b',
+                  fillOpacity: 0.95,
                   weight: 2,
                   className: 'map-cluster',
                 }}
@@ -242,62 +265,39 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
 
           const { report, lat, lng, stackSize } = item;
           const color = SEVERITY_COLORS[report.severity as SeverityLevel] || '#94a3b8';
-          const isFresh = recentReports[report.id] && Date.now() - recentReports[report.id] < 8000;
+          const isCritical = report.severity >= 4;
+          const isFresh = Boolean(recentReports[report.id] && Date.now() - recentReports[report.id] < 8000);
+
           return (
             <Fragment key={report.id}>
-              {isFresh && (
+              {/* Tactical perimeter ring for high severity or fresh incidents */}
+              {(isCritical || isFresh) && (
                 <CircleMarker
-                  key={`${report.id}-shock`}
+                  key={`${report.id}-ring`}
                   center={[lat, lng]}
-                  radius={report.severity >= 4 ? 20 : 16}
+                  radius={isFresh ? 15 : 13}
                   pathOptions={{
-                    color,
-                    fillColor: color,
-                    fillOpacity: 0.05,
-                    weight: 1,
-                    className: 'map-shockwave',
+                    color: isFresh ? '#7ae582' : color,
+                    fillColor: isFresh ? '#7ae582' : color,
+                    fillOpacity: 0.15,
+                    weight: 1.5,
+                    dashArray: '3, 3',
+                    className: 'map-tactical-ring',
                   }}
                   interactive={false}
                 />
               )}
-              {report.severity >= 4 && (
-                <CircleMarker
-                  key={`${report.id}-beacon`}
-                  center={[lat, lng]}
-                  radius={report.severity >= 5 ? 26 : 22}
-                  pathOptions={{
-                    color,
-                    fillColor: color,
-                    fillOpacity: 0.08,
-                    weight: 1,
-                    className: 'map-beacon',
-                  }}
-                  interactive={false}
-                />
-              )}
-              <CircleMarker
-                key={`${report.id}-halo`}
-                center={[lat, lng]}
-                radius={report.severity >= 4 ? 16 : report.severity >= 3 ? 13 : 10}
-                pathOptions={{
-                  color,
-                  fillColor: color,
-                  fillOpacity: 0.15,
-                  weight: 1,
-                  className: 'map-pulse',
-                }}
-                interactive={false}
-              />
+              {/* Primary crisp tactical incident pin */}
               <CircleMarker
                 key={report.id}
                 center={[lat, lng]}
-                radius={report.severity >= 4 ? 10 : report.severity >= 3 ? 8 : 6}
+                radius={isCritical ? 8 : 6}
                 pathOptions={{
-                  color,
+                  color: '#ffffff',
                   fillColor: color,
-                  fillOpacity: report.status === 'resolved' ? 0.3 : 0.8,
+                  fillOpacity: report.status === 'resolved' ? 0.4 : 0.95,
                   weight: 2,
-                  className: 'map-dot',
+                  className: 'map-tactical-dot',
                 }}
                 eventHandlers={{
                   click: () => onMarkerClick?.(report),
@@ -402,13 +402,21 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
         </button>
         <button
           type="button"
+          title="Recenter India tactical view"
           onClick={() => {
-            if (!mapRef || plottedPoints.length === 0) return;
-            const bounds = L.latLngBounds(plottedPoints);
-            mapRef.fitBounds(bounds.pad(0.25), { animate: true });
+            if (!mapRef) return;
+            const valid = plottedPoints.filter(
+              ([lat, lng]) => lat >= 6 && lat <= 38 && lng >= 66 && lng <= 98
+            );
+            if (valid.length > 0) {
+              const bounds = L.latLngBounds(valid);
+              mapRef.fitBounds(bounds.pad(0.12), { maxZoom: 10, animate: true });
+            } else {
+              mapRef.setView([22.5, 78.9], 5, { animate: true });
+            }
           }}
         >
-          o
+          ⌖
         </button>
       </div>
     </div>

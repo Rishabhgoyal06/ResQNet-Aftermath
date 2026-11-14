@@ -105,8 +105,10 @@ export default function HeatmapView({ reports, style, className }: HeatmapViewPr
   return (
     <div className={`map-shell ${className || ''}`} style={{ width: '100%', height: '100%', ...style }}>
       <MapContainer
-        center={[28.6139, 77.209]}
-        zoom={11}
+        center={[22.5, 78.9]}
+        zoom={5}
+        minZoom={4}
+        maxZoom={18}
         style={{ width: '100%', height: '100%' }}
         zoomControl={false}
       >
@@ -210,13 +212,21 @@ export default function HeatmapView({ reports, style, className }: HeatmapViewPr
         </button>
         <button
           type="button"
+          title="Recenter India tactical view"
           onClick={() => {
-            if (!mapRef || visibleReports.length === 0) return;
-            const bounds = L.latLngBounds(visibleReports.map((r) => [r.latitude, r.longitude]));
-            mapRef.fitBounds(bounds.pad(0.25), { animate: true });
+            if (!mapRef) return;
+            const valid = visibleReports
+              .map((r) => [r.latitude, r.longitude] as [number, number])
+              .filter(([lat, lng]) => lat >= 6 && lat <= 38 && lng >= 66 && lng <= 98);
+            if (valid.length > 0) {
+              const bounds = L.latLngBounds(valid);
+              mapRef.fitBounds(bounds.pad(0.12), { maxZoom: 10, animate: true });
+            } else {
+              mapRef.setView([22.5, 78.9], 5, { animate: true });
+            }
           }}
         >
-          o
+          ⌖
         </button>
       </div>
     </div>

@@ -6,8 +6,8 @@ import { useProcessedSOS } from '../hooks/useProcessedSOS';
 import './ReportsPage.css';
 
 export default function ReportsPage() {
-  const { reports, loading, updateStatus } = useRealtimeSOS();
-  const { reports: processedReports, loading: processedLoading, error: processedError } = useProcessedSOS();
+  const { reports, updateStatus } = useRealtimeSOS();
+  const { reports: processedReports, error: processedError } = useProcessedSOS();
   const [view, setView] = useState<'raw' | 'processed'>('raw');
 
   const detailedAreaById = useMemo(() => {
@@ -23,16 +23,6 @@ export default function ReportsPage() {
   const handleMarkResolved = async (id: string) => {
     await updateStatus(id, 'resolved');
   };
-
-  const activeLoading = view === 'raw' ? loading : processedLoading;
-
-  if (activeLoading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b' }}>
-        Loading reports...
-      </div>
-    );
-  }
 
   return (
     <div className="reports-page">
