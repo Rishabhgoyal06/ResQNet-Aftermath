@@ -1,0 +1,129 @@
+.intel-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 22px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.intel-page-header h2 {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.intel-page-header p {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.intel-page-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(480px, 1.4fr);
+  gap: 18px;
+  min-height: 0;
+}
+
+.intel-panel,
+.intel-feed {
+  background: rgba(13, 19, 36, 0.6);
+  border: 1px solid var(--glass-stroke);
+  border-radius: 18px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+:root[data-theme='light'] .intel-panel,
+:root[data-theme='light'] .intel-feed {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+.intel-panel {
+  padding: 14px;
+  overflow: hidden;
+}
+
+.intel-panel .analytics-panel {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  overflow-x: hidden;
+}
+
+.intel-feed {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.intel-loading,
+.intel-error {
+  padding: 16px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.intel-feed .feed-container {
+  flex: 1;
+  min-height: 0;
+}
+
+.intel-feed .feed-table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+}
+
+.intel-feed .feed-table {
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+.intel-feed .feed-td,
+.intel-feed .feed-th {
+  white-space: nowrap;
+}
+
+.intel-feed .feed-td--area,
+.intel-feed .feed-td--message {
+  max-width: 240px;
+}
+
+.intel-feed .feed-td {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.intel-feed .feed-td--time,
+.intel-feed .feed-td--actions,
+.intel-feed .feed-status,
+.intel-feed .feed-severity {
+  white-space: nowrap;
+}
+
+.intel-feed .feed-td--area,
+.intel-feed .feed-td--message {
+  max-width: none;
+}
+
+.intel-feed .feed-needs {
+  max-width: none;
+  flex-wrap: wrap;
+}
+
+.intel-feed .feed-need {
+  white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+  .intel-page-grid {
+    grid-template-columns: 1fr;
+  }
+}

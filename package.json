@@ -1,0 +1,15 @@
+{
+  "name": "resqnet-aftermath",
+  "version": "2.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix apps/dashboard run dev",
+    "dashboard": "npm --prefix apps/dashboard run dev",
+    "build:dashboard": "npm --prefix apps/dashboard run build",
+    "mobile": "npm --prefix apps/mobile start",
+    "process:local": "node scripts/process-sos-local.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.0"
+  }
+}

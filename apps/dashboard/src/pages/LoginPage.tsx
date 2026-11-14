@@ -1,0 +1,244 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { isSupabaseConfigured, saveSupabaseConfig, clearSupabaseConfig } from '../services/supabase';
+import './LoginPage.css';
+
+export default function LoginPage() {
+  const navigate = useNavigate();
+  const { login, signup } = useAuth();
+  const [isSignup, setIsSignup] = useState(false);
+  const [email, setEmail] = useState('admin@resqnet.in');
+  const [password, setPassword] = useState('admin123456');
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('official');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [configUrl, setConfigUrl] = useState('');
+  const [configAnon, setConfigAnon] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const result = isSignup
+      ? await signup(email, password, name, role)
+      : await login(email, password);
+
+    if (result.error) {
+      setError(result.error);
+      setLoading(false);
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
+  const handleFillDemo = (demoEmail: string) => {
+    setEmail(demoEmail);
+    setPassword(demoEmail.split('@')[0] + '123456');
+    setError(null);
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-bg">
+        {/* Animated grid dots */}
+        {Array.from({ length: 30 }).map((_, i) => (
+          <div
+            key={i}
+            className="grid-dot"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 3}s`,
+              opacity: Math.random() * 0.3 + 0.1,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="login-card">
+        <div className="login-header">
+          <div className="login-logo">
+            <span className="login-logo-icon">◆</span>
+            <span className="login-logo-text">RESQNET &times; AFTERMATH</span>
+          </div>
+          <p className="login-subtitle">EMERGENCY RESPONSE & SATELLITE COMMAND</p>
+        </div>
+
+        {!isSupabaseConfigured && (
+          <div style={{ marginBottom: 16, border: '1px solid rgba(239,68,68,0.4)', padding: 12, borderRadius: 8, background: 'rgba(147,0,10,0.1)' }}>
+            <div style={{ fontSize: 11, color: '#fca5a5', fontWeight: 700, marginBottom: 8 }}>
+              Supabase not configured. Paste URL and anon key to continue.
+            </div>
+            <div className="form-group">
+              <label className="form-label">SUPABASE URL</label>
+              <input
+                className="form-input"
+                type="text"
+                value={configUrl}
+                onChange={(e) => setConfigUrl(e.target.value)}
+                placeholder="https://xxxx.supabase.co"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">ANON KEY</label>
+              <input
+                className="form-input"
+                type="text"
+                value={configAnon}
+                onChange={(e) => setConfigAnon(e.target.value)}
+                placeholder="eyJhbGciOi..."
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="login-btn"
+                style={{ flex: 1, padding: '8px 12px', fontSize: 11 }}
+                type="button"
+                onClick={() => saveSupabaseConfig(configUrl, configAnon)}
+              >
+                Save & Reload
+              </button>
+              <button
+                className="login-btn"
+                style={{ background: '#334155', padding: '8px 12px', fontSize: 11 }}
+                type="button"
+                onClick={clearSupabaseConfig}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+
+        <form className="login-form" onSubmit={handleSubmit}>
+          {/* Quick Demo Fill Buttons for instant Hackathon Testing */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+            <button
+              type="button"
+              onClick={() => handleFillDemo('admin@resqnet.in')}
+              style={{
+                flex: 1,
+                padding: '5px 8px',
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                background: email === 'admin@resqnet.in' ? 'rgba(0, 240, 255, 0.2)' : 'rgba(30, 41, 59, 0.6)',
+                border: email === 'admin@resqnet.in' ? '1px solid #00f0ff' : '1px solid #334155',
+                color: email === 'admin@resqnet.in' ? '#00f0ff' : '#94a3b8',
+                borderRadius: 3,
+                cursor: 'pointer',
+              }}
+            >
+              Demo Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => handleFillDemo('official@resqnet.in')}
+              style={{
+                flex: 1,
+                padding: '5px 8px',
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                background: email === 'official@resqnet.in' ? 'rgba(0, 240, 255, 0.2)' : 'rgba(30, 41, 59, 0.6)',
+                border: email === 'official@resqnet.in' ? '1px solid #00f0ff' : '1px solid #334155',
+                color: email === 'official@resqnet.in' ? '#00f0ff' : '#94a3b8',
+                borderRadius: 3,
+                cursor: 'pointer',
+              }}
+            >
+              Demo Official
+            </button>
+            <button
+              type="button"
+              onClick={() => handleFillDemo('ngo@resqnet.in')}
+              style={{
+                flex: 1,
+                padding: '5px 8px',
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                background: email === 'ngo@resqnet.in' ? 'rgba(0, 240, 255, 0.2)' : 'rgba(30, 41, 59, 0.6)',
+                border: email === 'ngo@resqnet.in' ? '1px solid #00f0ff' : '1px solid #334155',
+                color: email === 'ngo@resqnet.in' ? '#00f0ff' : '#94a3b8',
+                borderRadius: 3,
+                cursor: 'pointer',
+              }}
+            >
+              Demo NGO
+            </button>
+          </div>
+
+          {isSignup && (
+            <div className="form-group">
+              <label className="form-label">OPERATOR NAME</label>
+              <input
+                className="form-input"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your name"
+                required
+              />
+            </div>
+          )}
+
+          <div className="form-group">
+            <label className="form-label">EMAIL</label>
+            <input
+              className="form-input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="operator@resqnet.in"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">PASSWORD</label>
+            <input
+              className="form-input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              minLength={6}
+            />
+          </div>
+
+          {isSignup && (
+            <div className="form-group">
+              <label className="form-label">ROLE</label>
+              <select className="form-input form-select" value={role} onChange={(e) => setRole(e.target.value)}>
+                <option value="admin">Admin</option>
+                <option value="official">Government Official</option>
+                <option value="ngo">NGO</option>
+                <option value="volunteer">Volunteer</option>
+              </select>
+            </div>
+          )}
+
+          {error && <div className="form-error">{error}</div>}
+
+          <button className="login-btn" type="submit" disabled={loading}>
+            {loading ? 'AUTHENTICATING...' : isSignup ? 'CREATE ACCOUNT' : 'ACCESS COMMAND CENTER'}
+          </button>
+        </form>
+
+        <div className="login-footer">
+          <button className="toggle-btn" onClick={() => setIsSignup(!isSignup)}>
+            {isSignup ? 'Already have an account? Login' : 'Need an account? Sign up'}
+          </button>
+          <button className="public-btn" onClick={() => navigate('/public')}>
+            Access as Public Viewer →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
