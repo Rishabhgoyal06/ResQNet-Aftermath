@@ -8,7 +8,6 @@ import {
   Flame,
   Waves,
   Building,
-  Key,
   ShieldCheck,
   RefreshCw,
   Clock,
@@ -40,16 +39,6 @@ export default function DisasterHistoryArchiveView({
   const [liveEvents, setLiveEvents] = useState<DisasterEventRecord[]>([]);
   const [isLoadingLive, setIsLoadingLive] = useState(false);
 
-  // Optional API Key Modal
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const [geminiApiKey, setGeminiApiKey] = useState(
-    () => localStorage.getItem('RESQNET_GEMINI_API_KEY') || ''
-  );
-  const [sentinelHubKey, setSentinelHubKey] = useState(
-    () => localStorage.getItem('RESQNET_SENTINEL_KEY') || ''
-  );
-  const [keySavedMessage, setKeySavedMessage] = useState(false);
-
   const loadLiveRadar = async () => {
     setIsLoadingLive(true);
     try {
@@ -63,13 +52,6 @@ export default function DisasterHistoryArchiveView({
   useEffect(() => {
     loadLiveRadar();
   }, []);
-
-  const handleSaveApiKeys = () => {
-    if (geminiApiKey) localStorage.setItem('RESQNET_GEMINI_API_KEY', geminiApiKey);
-    if (sentinelHubKey) localStorage.setItem('RESQNET_SENTINEL_KEY', sentinelHubKey);
-    setKeySavedMessage(true);
-    setTimeout(() => setKeySavedMessage(false), 2500);
-  };
 
   // Filtered Historical List
   const filteredHistorical = useMemo(() => {
@@ -119,39 +101,39 @@ export default function DisasterHistoryArchiveView({
       {/* Header & KPI Summary */}
       <div className="file-kpi-grid">
         <div className="file-kpi-card">
-          <span className="file-kpi-label">VERIFIED HISTORICAL ARCHIVE</span>
+          <span className="file-kpi-label">HISTORICAL DISASTERS ARCHIVE</span>
           <div className="file-kpi-val" style={{ color: '#4cc9ff' }}>
-            {HISTORICAL_INDIA_DISASTERS.length} <small>Major Events</small>
+            {HISTORICAL_INDIA_DISASTERS.length} <small>Verified Events</small>
           </div>
-          <span className="file-kpi-sub">5–10 Year India Catalog (2018–2025)</span>
+          <span className="file-kpi-sub">5–10 Year Subcontinent Records (2018–2025)</span>
         </div>
 
         <div className="file-kpi-card">
           <span className="file-kpi-label">LIVE INDIA RADAR FEEDS</span>
           <div className="file-kpi-val" style={{ color: '#ef4444' }}>
-            {liveEvents.length} <small>Active Alerts</small>
+            {liveEvents.length} <small>Active Feeds</small>
           </div>
           <span className="file-kpi-sub">Polled Live from UN GDACS & USGS</span>
         </div>
 
         <div className="file-kpi-card">
-          <span className="file-kpi-label">SATELLITE DATA SOURCES</span>
+          <span className="file-kpi-label">SPACE SENSORS</span>
           <div className="file-kpi-val" style={{ color: '#7ae582' }}>
             NASA GIBS
           </div>
-          <span className="file-kpi-sub">Daily MODIS/VIIRS & Esri High-Res</span>
+          <span className="file-kpi-sub">Daily Space Imagery & Esri High-Res</span>
         </div>
 
         <div className="file-kpi-card">
-          <span className="file-kpi-label">DATA INTEGRITY</span>
+          <span className="file-kpi-label">DATA FIDELITY</span>
           <div className="file-kpi-val" style={{ color: '#ffd166' }}>
             100% REAL
           </div>
-          <span className="file-kpi-sub">Official ISRO / GSI / CWC / IMD Records</span>
+          <span className="file-kpi-sub">Official GSI / CWC / IMD / GDACS Records</span>
         </div>
       </div>
 
-      {/* Mode Switcher & Enterprise Settings Bar */}
+      {/* Mode Switcher Bar */}
       <div className="file-action-bar">
         {/* Toggle Mode */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -162,7 +144,7 @@ export default function DisasterHistoryArchiveView({
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <History size={13} />
-            <span>Historical Catastrophes (2018–2025)</span>
+            <span>Historical Archive (2018–2025)</span>
           </button>
 
           <button
@@ -182,7 +164,7 @@ export default function DisasterHistoryArchiveView({
           </button>
         </div>
 
-        {/* Right tools */}
+        {/* Right Tools */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {mode === 'live' && (
             <button
@@ -196,17 +178,6 @@ export default function DisasterHistoryArchiveView({
               <span>{isLoadingLive ? 'Polling Feeds...' : 'Refresh Radar'}</span>
             </button>
           )}
-
-          <button
-            type="button"
-            className="file-filter-btn"
-            onClick={() => setIsApiKeyModalOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-            title="Configure optional Gemini AI & Sentinel Hub credentials"
-          >
-            <Key size={13} color="#00f0ff" />
-            <span>API Credentials</span>
-          </button>
         </div>
       </div>
 
@@ -347,7 +318,7 @@ export default function DisasterHistoryArchiveView({
                     </div>
 
                     <div className="building-submetric">
-                      <span className="submetric-lbl">Fatalities / Impacted</span>
+                      <span className="submetric-lbl">Fatalities</span>
                       <strong className="submetric-val" style={{ color: '#ef4444' }}>
                         {disaster.casualties > 0 ? `${disaster.casualties} Deaths` : 'Zero Fatalities'}
                       </strong>
@@ -388,11 +359,6 @@ export default function DisasterHistoryArchiveView({
                     <span style={{ color: '#00f0ff' }}>NASA GIBS</span>
                   </div>
 
-                  {/* Tactical Recovery Notes */}
-                  <div style={{ fontSize: 10.5, color: '#94a3b8', fontStyle: 'italic' }}>
-                    <strong>Tactical Operations:</strong> {disaster.tacticalNotes}
-                  </div>
-
                   {/* Footer & Action */}
                   <div className="building-card-footer">
                     <span className="building-coords">
@@ -411,7 +377,7 @@ export default function DisasterHistoryArchiveView({
                       }}
                     >
                       <Compass size={13} />
-                      <span>{isActive ? 'CURRENTLY ACTIVE' : 'Launch Satellite AI & Rescue Analysis'}</span>
+                      <span>{isActive ? 'CURRENTLY ACTIVE' : 'Load Disaster & Satellite Map'}</span>
                     </button>
                   </div>
                 </div>
@@ -438,7 +404,7 @@ export default function DisasterHistoryArchiveView({
                   AUTONOMOUS REAL-TIME INDIA DISASTER RADAR
                 </strong>
                 <p style={{ margin: '2px 0 0 0', fontSize: 11, color: '#cbd5e1' }}>
-                  Live API polling from the United Nations Global Disaster Alert and Coordination System (GDACS) and USGS Global Seismographic Network for India & surrounding maritime boundaries.
+                  Live API telemetry from UN GDACS and USGS Seismographic Network for India & surrounding maritime boundaries.
                 </p>
               </div>
             </div>
@@ -463,7 +429,7 @@ export default function DisasterHistoryArchiveView({
                   <div>
                     <ShieldCheck size={32} color="#7ae582" style={{ margin: '0 auto 12px' }} />
                     <p style={{ fontSize: 14, color: '#e2e8f0', fontWeight: 700 }}>
-                      All Subcontinent Corridors Nominal
+                      Subcontinent Corridors Nominal
                     </p>
                     <p style={{ fontSize: 11 }}>
                       No active Level-4/5 natural disaster alerts currently registered by GDACS for India.
@@ -536,7 +502,7 @@ export default function DisasterHistoryArchiveView({
                         }}
                       >
                         <Compass size={13} />
-                        <span>Engage Real-Time Satellite & Rescue Pipeline</span>
+                        <span>Load Live Event On Map</span>
                       </button>
                     </div>
                   </div>
@@ -546,84 +512,6 @@ export default function DisasterHistoryArchiveView({
           </div>
         )}
       </div>
-
-      {/* Optional Enterprise API Credentials Modal */}
-      {isApiKeyModalOpen && (
-        <div
-          className="vision-modal-backdrop"
-          onClick={() => setIsApiKeyModalOpen(false)}
-        >
-          <div
-            className="trigger-modal-box"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: 520 }}
-          >
-            <div className="vision-modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Key size={18} color="#00f0ff" />
-                <div>
-                  <h3 className="vision-modal-title">ENTERPRISE API CREDENTIALS</h3>
-                  <p className="vision-modal-subtitle">
-                    Optional keys for custom AI generation & multi-spectral satellite indices
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div
-                style={{
-                  background: 'rgba(122, 229, 130, 0.1)',
-                  border: '1px solid rgba(122, 229, 130, 0.25)',
-                  borderRadius: 10,
-                  padding: 10,
-                  fontSize: 11,
-                  color: '#b3bdd6',
-                }}
-              >
-                <strong style={{ color: '#7ae582' }}>Zero Key Requirement:</strong> NASA GIBS daily true color satellite imagery, USGS Seismology feeds, UN GDACS natural disaster feeds, and Esri World Imagery work 100% natively without any keys!
-              </div>
-
-              <div className="form-field">
-                <label>Google Gemini API Key (For Deep Generative Damage Analysis)</label>
-                <input
-                  type="password"
-                  value={geminiApiKey}
-                  onChange={(e) => setGeminiApiKey(e.target.value)}
-                  placeholder="AIzaSy..."
-                />
-              </div>
-
-              <div className="form-field">
-                <label>Sentinel Hub / Copernicus Client ID (Optional 10m Multispectral)</label>
-                <input
-                  type="password"
-                  value={sentinelHubKey}
-                  onChange={(e) => setSentinelHubKey(e.target.value)}
-                  placeholder="e.g. sh-client-id-..."
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
-                <button
-                  type="button"
-                  className="file-filter-btn"
-                  onClick={() => setIsApiKeyModalOpen(false)}
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  className="file-primary-action-btn"
-                  onClick={handleSaveApiKeys}
-                >
-                  {keySavedMessage ? 'Credentials Saved!' : 'Save Credentials'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

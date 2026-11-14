@@ -2,9 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Cpu,
-  Waves,
   Building,
-  Database,
   Satellite,
   LifeBuoy,
   Route,
@@ -14,8 +12,6 @@ import {
   AlertTriangle,
   History,
 } from 'lucide-react';
-import { useProcessedSOS } from '../hooks/useProcessedSOS';
-import { useRealtimeSOS } from '../hooks/useRealtimeSOS';
 import SatelliteEarthObservationMap from '../components/aftermath/SatelliteEarthObservationMap';
 import DamageAssessmentPanel from '../components/aftermath/DamageAssessmentPanel';
 import DamageAssessmentView from '../components/aftermath/views/DamageAssessmentView';
@@ -28,17 +24,6 @@ import {
   HISTORICAL_INDIA_DISASTERS,
   type DisasterEventRecord,
 } from '../services/indiaDisasterArchive';
-import {
-  DELHI_YAMUNA_SATELLITE_DATA,
-  FLOOD_BUILDINGS,
-  INITIAL_ROAD_SEGMENTS,
-  INITIAL_RESCUE_RESOURCES,
-  EARTHQUAKE_SATELLITE_DATA,
-  EARTHQUAKE_BUILDINGS,
-  EARTHQUAKE_ROADS,
-  EARTHQUAKE_RESCUE_RESOURCES,
-  EARTHQUAKE_SOS_SEEDS,
-} from '../services/aftermathScenarioData';
 import {
   generateIncidentClusters,
   generateRescueMissions,
@@ -53,85 +38,8 @@ import type {
   ProcessedSOSReport,
   BuildingDamageItem,
   RescueMission,
-  SatelliteDataset,
 } from '@resqnet/shared-types';
 import '../components/aftermath/AftermathComponents.css';
-
-// Specialized scenario seeds for Satellite Flood Change Detection
-const SPECIALIZED_YAMUNA_SEEDS: ProcessedSOSReport[] = [
-  {
-    id: 'YAMUNA-SOS-01',
-    created_at: new Date(Date.now() - 25 * 60000).toISOString(),
-    name: 'Tenzin Norbu',
-    phone: '98110-XXXXX',
-    latitude: 28.6875,
-    longitude: 77.2295,
-    category: 'Rescue Needed',
-    verified_severity: 5,
-    district: 'North Delhi',
-    detailed_area: 'Majnu Ka Tilla Tibetan Camp',
-    message: 'Water has reached 1st floor near Monastery market. 6 people trapped including 2 elderly monks and a child. Boat needed urgently!',
-    supply_requirements: { food: 1, water: 1, doctor: 0, shelter: 1, medicines: 0 },
-    casualties_reported: false,
-    source_project: 'local',
-    processed_at: new Date().toISOString(),
-    rephrased_message: 'Water reaching 1st floor, 6 trapped with 2 elderly and 1 child. Boat required.',
-  },
-  {
-    id: 'YAMUNA-SOS-02',
-    created_at: new Date(Date.now() - 35 * 60000).toISOString(),
-    name: 'Rajinder Kumar',
-    phone: '98731-XXXXX',
-    latitude: 28.6690,
-    longitude: 77.2315,
-    category: 'Rescue Needed',
-    verified_severity: 5,
-    district: 'North Delhi',
-    detailed_area: 'ISBT Kashmiri Gate Low Ring Road',
-    message: 'Ring road underpass is completely submerged under 5 feet water. Bus passengers evacuated to flyover pillar, 8 people stranded.',
-    supply_requirements: { food: 1, water: 1, doctor: 0, shelter: 1, medicines: 0 },
-    casualties_reported: false,
-    source_project: 'local',
-    processed_at: new Date().toISOString(),
-    rephrased_message: '8 passengers stranded on flyover pillar near submerged ISBT underpass.',
-  },
-  {
-    id: 'YAMUNA-SOS-03',
-    created_at: new Date(Date.now() - 15 * 60000).toISOString(),
-    name: 'Amit Sharma',
-    phone: '99100-XXXXX',
-    latitude: 28.7060,
-    longitude: 77.2250,
-    category: 'Food / Water',
-    verified_severity: 3,
-    district: 'North Delhi',
-    detailed_area: 'Wazirabad Village Ghat',
-    message: 'No clean drinking water since morning. 15 families cut off from main road by river overflow.',
-    supply_requirements: { food: 1, water: 1, doctor: 0, shelter: 0, medicines: 0 },
-    casualties_reported: false,
-    source_project: 'local',
-    processed_at: new Date().toISOString(),
-    rephrased_message: '15 families cut off near Wazirabad Ghat needing food and clean water.',
-  },
-  {
-    id: 'YAMUNA-SOS-04',
-    created_at: new Date(Date.now() - 10 * 60000).toISOString(),
-    name: 'Dr. Sunita Rao',
-    phone: '98101-XXXXX',
-    latitude: 28.6790,
-    longitude: 77.2175,
-    category: 'Medical Emergency',
-    verified_severity: 4,
-    district: 'North Delhi',
-    detailed_area: 'Civil Lines Elevated Command Post',
-    message: 'Trauma patients arriving from inundated lowlands. Need additional medical transport and burn/injury dressings.',
-    supply_requirements: { food: 0, water: 0, doctor: 1, shelter: 0, medicines: 1 },
-    casualties_reported: false,
-    source_project: 'local',
-    processed_at: new Date().toISOString(),
-    rephrased_message: 'Field triage receiving evacuees. Medical ambulance deployment requested.',
-  },
-];
 
 const FILE_TABS = [
   { id: 'history', name: 'Disaster Archive', ext: '.hist', icon: History },
@@ -151,16 +59,10 @@ export default function AftermathPage() {
   // Active file view defaults to satellite
   const activeFile = fileId || 'satellite';
 
-  const { reports: processedDbReports } = useProcessedSOS();
-  const { reports: rawDbReports } = useRealtimeSOS();
-
-  // Active Selected Disaster Record (Defaults to Wayanad Landslides 2024 or Delhi Yamuna 2023)
+  // Active Disaster Record (Defaults to Wayanad Landslides 2024)
   const [currentDisaster, setCurrentDisaster] = useState<DisasterEventRecord>(
     () => HISTORICAL_INDIA_DISASTERS[0]
   );
-
-  // Catastrophe Scenario Mode:
-  const [scenario, setScenario] = useState<'custom_disaster' | 'yamuna_flood' | 'earthquake' | 'real_db'>('custom_disaster');
 
   // Dynamically Ingested Real-Time User Reports
   const [liveUserReports, setLiveUserReports] = useState<ProcessedSOSReport[]>([]);
@@ -174,27 +76,11 @@ export default function AftermathPage() {
   const [, setSelectedMission] = useState<RescueMission | undefined>();
   const [approvedMissionIds, setApprovedMissionIds] = useState<Set<string>>(new Set());
 
-  // Active Satellite Dataset based on disaster selection or scenario
-  const activeSatelliteData = useMemo<SatelliteDataset>(() => {
-    if (scenario === 'custom_disaster') {
-      return currentDisaster.satelliteData;
-    }
-    return scenario === 'earthquake' ? EARTHQUAKE_SATELLITE_DATA : DELHI_YAMUNA_SATELLITE_DATA;
-  }, [scenario, currentDisaster]);
-
-  const activeBuildings = useMemo<BuildingDamageItem[]>(() => {
-    if (scenario === 'custom_disaster') {
-      return currentDisaster.buildings.length > 0 ? currentDisaster.buildings : FLOOD_BUILDINGS;
-    }
-    return scenario === 'earthquake' ? EARTHQUAKE_BUILDINGS : FLOOD_BUILDINGS;
-  }, [scenario, currentDisaster]);
-
-  const baseRoads = useMemo(() => {
-    if (scenario === 'custom_disaster') {
-      return currentDisaster.roads.length > 0 ? currentDisaster.roads : INITIAL_ROAD_SEGMENTS;
-    }
-    return scenario === 'earthquake' ? EARTHQUAKE_ROADS : INITIAL_ROAD_SEGMENTS;
-  }, [scenario, currentDisaster]);
+  // Active Datasets dynamically derived from the selected disaster
+  const activeSatelliteData = currentDisaster.satelliteData;
+  const activeBuildings = currentDisaster.buildings;
+  const baseRoads = currentDisaster.roads;
+  const activeResources = currentDisaster.rescueResources;
 
   // Apply user interactive road overrides
   const activeRoads = useMemo(() => {
@@ -210,63 +96,23 @@ export default function AftermathPage() {
     });
   }, [baseRoads, roadOverrides]);
 
-  const activeResources = useMemo(() => {
-    if (scenario === 'custom_disaster') {
-      return currentDisaster.rescueResources.length > 0
-        ? currentDisaster.rescueResources
-        : INITIAL_RESCUE_RESOURCES;
-    }
-    return scenario === 'earthquake' ? EARTHQUAKE_RESCUE_RESOURCES : INITIAL_RESCUE_RESOURCES;
-  }, [scenario, currentDisaster]);
-
-  // Reports according to disaster + any live ingested reports
+  // Dynamic Reports: Real disaster seeds + dynamically ingested SOS
   const activeReports = useMemo<ProcessedSOSReport[]>(() => {
-    let baseList: ProcessedSOSReport[] = [];
-
-    if (scenario === 'custom_disaster') {
-      baseList = currentDisaster.sosSeeds.length > 0 ? currentDisaster.sosSeeds : SPECIALIZED_YAMUNA_SEEDS;
-    } else if (scenario === 'earthquake') {
-      baseList = EARTHQUAKE_SOS_SEEDS;
-    } else if (scenario === 'yamuna_flood') {
-      baseList = SPECIALIZED_YAMUNA_SEEDS;
-    } else {
-      if (processedDbReports && processedDbReports.length > 0) {
-        baseList = processedDbReports;
-      } else {
-        baseList = (rawDbReports || []).map((r) => ({
-          id: r.id,
-          name: r.name,
-          phone: r.phone,
-          latitude: r.latitude,
-          longitude: r.longitude,
-          category: r.category,
-          message: r.message,
-          created_at: r.created_at,
-          district: r.district || 'Unknown',
-          detailed_area: r.district,
-          verified_severity: r.severity,
-          supply_requirements: null,
-          casualties_reported: r.severity >= 5,
-          processed_at: r.created_at,
-          rephrased_message: r.message,
-        }));
-      }
-    }
-
-    return [...liveUserReports, ...baseList];
-  }, [scenario, currentDisaster, liveUserReports, processedDbReports, rawDbReports]);
+    const disasterSeeds = currentDisaster.sosSeeds || [];
+    return [...liveUserReports, ...disasterSeeds];
+  }, [currentDisaster, liveUserReports]);
 
   // TRIGGER 1: Evaluate Spatial SOS Density Surge across active reports
   const activeSurgeEvent = useMemo(() => {
     return evaluateSOSDensitySurge(activeReports, 2500, 3);
   }, [activeReports]);
 
-  // Module B & C: Generate AI Incident Clusters & Explainable RPS Scores
+  // AI Incident Clusters & Explainable RPS Scores
   const clusters = useMemo(() => {
     return generateIncidentClusters(activeReports, activeSatelliteData);
   }, [activeReports, activeSatelliteData]);
 
-  // Module E & G: Risk-Aware Routing & Fast Recovery Rescue Missions
+  // Risk-Aware Routing & Fast Recovery Rescue Missions
   const missions = useMemo(() => {
     const generated = generateRescueMissions(clusters, activeRoads, activeResources);
     return generated.map((m) => {
@@ -315,7 +161,6 @@ export default function AftermathPage() {
   // When a user selects a historical or live disaster from the archive:
   const handleSelectDisasterFromArchive = (disaster: DisasterEventRecord) => {
     setCurrentDisaster(disaster);
-    setScenario('custom_disaster');
     setSelectedCluster(undefined);
     setSelectedBuilding(undefined);
     setRoadOverrides({});
@@ -331,13 +176,13 @@ export default function AftermathPage() {
       {
         id: `SURGE-SOS-${Date.now()}-A`,
         name: 'Field Relief Volunteer',
-        phone: '98110-33211',
+        phone: '98110-XXXXX',
         latitude: centerLat + 0.002,
         longitude: centerLng + 0.001,
         category: 'Rescue Needed',
         verified_severity: 5,
         district: currentDisaster.district,
-        detailed_area: `${currentDisaster.shortName} Core Inundation Zone`,
+        detailed_area: `${currentDisaster.shortName} Core Zone`,
         message: 'Water/rubble breach! 8 citizens trapped inside structural void, boat/excavator needed urgently!',
         supply_requirements: { food: 1, water: 1, doctor: 0, shelter: 1, medicines: 1 },
         casualties_reported: true,
@@ -346,65 +191,18 @@ export default function AftermathPage() {
         created_at: new Date().toISOString(),
         rephrased_message: '8 trapped in structural void. Immediate rescue requested.',
       },
-      {
-        id: `SURGE-SOS-${Date.now()}-B`,
-        name: 'Local Panchayat Lead',
-        phone: '98731-99421',
-        latitude: centerLat - 0.002,
-        longitude: centerLng - 0.001,
-        category: 'Rescue Needed',
-        verified_severity: 5,
-        district: currentDisaster.district,
-        detailed_area: `${currentDisaster.shortName} Arterial Bridge`,
-        message: 'Primary bridge completely cut off! 6 people holding onto concrete pier.',
-        supply_requirements: { food: 0, water: 1, doctor: 1, shelter: 0, medicines: 0 },
-        casualties_reported: true,
-        source_project: 'surge_simulation',
-        processed_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        rephrased_message: '6 victims holding onto pier near flooded bridge.',
-      },
-      {
-        id: `SURGE-SOS-${Date.now()}-C`,
-        name: 'Medical Aid Worker',
-        phone: '98991-00213',
-        latitude: centerLat + 0.001,
-        longitude: centerLng - 0.002,
-        category: 'Medical Emergency',
-        verified_severity: 4,
-        district: currentDisaster.district,
-        detailed_area: `${currentDisaster.shortName} Community Camp`,
-        message: 'Dispensary cut off by floodwater. Trauma patients require emergency saline and stretchers.',
-        supply_requirements: { food: 1, water: 1, doctor: 1, shelter: 1, medicines: 1 },
-        casualties_reported: false,
-        source_project: 'surge_simulation',
-        processed_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        rephrased_message: 'Community camp needing medical triage and clean water transport.',
-      },
     ];
 
     setLiveUserReports((prev) => [...surgeSeeds, ...prev]);
   };
 
-  const handleSelectOfficialAlert = (alert: OfficialDisasterAlert) => {
-    if (alert.category === 'earthquake') {
-      setScenario('earthquake');
-    } else {
-      setScenario('yamuna_flood');
-    }
+  const handleSelectOfficialAlert = (_alert: OfficialDisasterAlert) => {
+    navigate('/aftermath/history');
   };
-
-  const calculatedArea =
-    scenario === 'custom_disaster'
-      ? currentDisaster.impactedAreaSqKm
-      : scenario === 'earthquake'
-      ? 4.2
-      : 14.8;
 
   return (
     <div className="aftermath-page">
-      {/* Top Banner / Tactical Command Bar */}
+      {/* Top Tactical Command Bar - Clean & Non-Redundant */}
       <div className="aftermath-topbar">
         <div className="aftermath-brand">
           <Cpu className="sat-icon" size={22} />
@@ -419,72 +217,37 @@ export default function AftermathPage() {
           </div>
         </div>
 
-        {/* Active Disaster Indicator & Archive Switcher */}
+        {/* Active Disaster Pill & Quick Archive Switcher */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
-            background: 'rgba(6, 10, 20, 0.6)',
-            border: '1px solid rgba(76, 201, 255, 0.25)',
+            gap: 10,
+            background: 'rgba(6, 10, 20, 0.65)',
+            border: '1px solid rgba(76, 201, 255, 0.3)',
             borderRadius: 999,
-            padding: '4px 12px 4px 6px',
+            padding: '5px 14px 5px 6px',
           }}
         >
           <button
             type="button"
             className="aftermath-scenario-btn is-active"
             onClick={() => navigate('/aftermath/history')}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px' }}
-            title="Open Historical Disasters Archive & Real-Time Radar"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px' }}
+            title="Switch disaster or view real-time radar in Disaster Archive (.hist)"
           >
-            <History size={12} />
+            <History size={13} />
             <span>DISASTER ARCHIVE</span>
           </button>
 
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#e6edf9' }}>
-            {currentDisaster.shortName} ({currentDisaster.startDate.split('-')[0]})
-          </span>
-        </div>
-
-        {/* Quick Disaster Scenario Switcher */}
-        <div className="aftermath-scenario-selector" role="group" aria-label="Catastrophe Scenario">
-          <button
-            type="button"
-            className={`aftermath-scenario-btn ${scenario === 'yamuna_flood' ? 'is-active' : ''}`}
-            onClick={() => {
-              setScenario('yamuna_flood');
-              setSelectedCluster(undefined);
-              setSelectedBuilding(undefined);
-            }}
-          >
-            <Waves size={13} />
-            <span>YAMUNA</span>
-          </button>
-          <button
-            type="button"
-            className={`aftermath-scenario-btn ${scenario === 'earthquake' ? 'is-active' : ''}`}
-            onClick={() => {
-              setScenario('earthquake');
-              setSelectedCluster(undefined);
-              setSelectedBuilding(undefined);
-            }}
-          >
-            <Building size={13} />
-            <span>EARTHQUAKE</span>
-          </button>
-          <button
-            type="button"
-            className={`aftermath-scenario-btn ${scenario === 'real_db' ? 'is-active' : ''}`}
-            onClick={() => {
-              setScenario('real_db');
-              setSelectedCluster(undefined);
-              setSelectedBuilding(undefined);
-            }}
-          >
-            <Database size={13} />
-            <span>SUPABASE ({activeReports.length})</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: '#00f0ff' }}>
+              📍 {currentDisaster.title}
+            </span>
+            <span style={{ fontSize: 10.5, color: '#94a3b8' }}>
+              [{currentDisaster.coordinates[0].toFixed(2)}, {currentDisaster.coordinates[1].toFixed(2)}]
+            </span>
+          </div>
         </div>
 
         {/* Status Indicator */}
@@ -504,7 +267,7 @@ export default function AftermathPage() {
           ) : (
             <div className="aftermath-pulse">
               <span className="pulse-dot" />
-              <span>100% REAL DATA</span>
+              <span>LIVE SATELLITE ENGINE</span>
             </div>
           )}
         </div>
@@ -542,6 +305,8 @@ export default function AftermathPage() {
       {activeFile === 'satellite' && (
         <div style={{ flex: 1, minHeight: 0, height: '100%', position: 'relative' }}>
           <SatelliteEarthObservationMap
+            centerCoordinates={currentDisaster.coordinates}
+            zoomLevel={currentDisaster.zoom}
             clusters={clusters}
             roadSegments={activeRoads}
             resources={activeResources}
@@ -560,8 +325,7 @@ export default function AftermathPage() {
       {activeFile === 'damage' && (
         <DamageAssessmentView
           buildings={activeBuildings}
-          inundatedAreaSqKm={calculatedArea}
-          scenarioName={scenario}
+          inundatedAreaSqKm={currentDisaster.impactedAreaSqKm}
           onSelectBuilding={handleSelectBuilding}
           onNavigateToMap={() => navigate('/aftermath/satellite')}
         />
@@ -608,6 +372,8 @@ export default function AftermathPage() {
         <div className="aftermath-grid">
           <div className="aftermath-left-col">
             <SatelliteEarthObservationMap
+              centerCoordinates={currentDisaster.coordinates}
+              zoomLevel={currentDisaster.zoom}
               clusters={clusters}
               roadSegments={activeRoads}
               resources={activeResources}
@@ -628,7 +394,7 @@ export default function AftermathPage() {
               buildings={activeBuildings}
               selectedCluster={selectedCluster}
               selectedBuildingId={selectedBuilding?.id}
-              inundatedAreaSqKm={calculatedArea}
+              inundatedAreaSqKm={currentDisaster.impactedAreaSqKm}
               onToggleRoad={handleToggleRoad}
               onApproveMission={handleApproveMission}
               onSelectBuilding={handleSelectBuilding}
