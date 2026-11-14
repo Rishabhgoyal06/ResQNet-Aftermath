@@ -16,24 +16,24 @@ import {
   saveSupabaseConfig,
   clearSupabaseConfig,
 } from '../services/supabase';
+import RotatingEarthGlobe from '../components/common/RotatingEarthGlobe';
 import './LoginPage.css';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, signup } = useAuth();
 
-  // Auth form states
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState('aditi.kapoor@resqnet.in');
   const [password, setPassword] = useState('aditi123456');
   const [name, setName] = useState('Aditi Kapoor');
-  const [role, setRole] = useState('official');
+  const [signupRole, setSignupRole] = useState('official');
   const [rememberSession, setRememberSession] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Optional collapsible Supabase config
+  // Optional collapsible Supabase connection config
   const [showDbConfig, setShowDbConfig] = useState(false);
   const [configUrl, setConfigUrl] = useState('');
   const [configAnon, setConfigAnon] = useState('');
@@ -45,7 +45,7 @@ export default function LoginPage() {
 
     try {
       const result = isSignup
-        ? await signup(email, password, name, role)
+        ? await signup(email, password, name, signupRole)
         : await login(email, password);
 
       if (result.error) {
@@ -55,32 +55,22 @@ export default function LoginPage() {
         navigate('/dashboard');
       }
     } catch (err: any) {
-      setError(err?.message || 'Authentication error. Please check credentials.');
+      setError(err?.message || 'Authentication error.');
       setLoading(false);
     }
   };
 
-  // Quick 1-click Demo Login for hackathon testing & evaluators
-  const handleQuickDemo = async () => {
+  const handleSelectRoleDemo = async (roleEmail: string, rolePass: string) => {
+    setEmail(roleEmail);
+    setPassword(rolePass);
     setError(null);
     setLoading(true);
-    const demoEmail = 'official@resqnet.in';
-    const demoPass = 'official123456';
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setRole('official');
 
     try {
-      const res = await login(demoEmail, demoPass);
+      const res = await login(roleEmail, rolePass);
       if (res.error) {
-        // Fallback to admin if official is not yet registered
-        const adminRes = await login('admin@resqnet.in', 'admin123456');
-        if (adminRes.error) {
-          setError('Demo account error: ' + (adminRes.error || res.error));
-          setLoading(false);
-        } else {
-          navigate('/dashboard');
-        }
+        setError(res.error);
+        setLoading(false);
       } else {
         navigate('/dashboard');
       }
@@ -91,7 +81,7 @@ export default function LoginPage() {
 
   return (
     <div className="resqnet-tactical-page">
-      {/* ── Top Navigation Bar ── */}
+      {/* ── Top Tactical Navigation Bar ── */}
       <header className="tactical-navbar">
         <div className="nav-brand-group">
           <div className="nav-logo-box">
@@ -139,45 +129,41 @@ export default function LoginPage() {
       <div className="tactical-workspace">
         {/* Left Hero & Visual Globe Section */}
         <section className="hero-section">
-          {/* Tag */}
-          <div className="hero-tag">
-            <span className="tag-square">■</span>
-            <span>INDIA • RESPONDER NETWORK</span>
+          {/* Top Tag & Narrative */}
+          <div className="hero-top-content">
+            <div className="hero-tag">
+              <span className="tag-square">■</span>
+              <span>INDIA • RESPONDER NETWORK</span>
+            </div>
+
+            <h1 className="hero-headline">
+              When the world needs
+              <br />
+              help, every <span className="highlight-second">second</span>
+              <br />
+              matters.
+            </h1>
+
+            <p className="hero-subtext">
+              A shared operating picture for those who respond. See the signal,
+              understand the need, move with purpose.
+            </p>
           </div>
 
-          {/* Headline */}
-          <h1 className="hero-headline">
-            When the world needs
-            <br />
-            help, every <span className="highlight-second">second</span>
-            <br />
-            matters.
-          </h1>
-
-          {/* Description */}
-          <p className="hero-subtext">
-            A shared operating picture for those who respond. See the signal,
-            understand the need, move with purpose.
-          </p>
-
-          {/* 3D Photorealistic Earth Globe & Orbital Telemetry Visual */}
+          {/* 3D Photorealistic Rotating Earth Globe & Telemetry Orbits */}
           <div className="globe-telemetry-stage">
             {/* Ambient Background Radial Glow */}
             <div className="globe-ambient-glow" />
 
-            {/* 3D Earth Globe Sphere */}
+            {/* True 3D Rotating WebGL Globe */}
             <div className="earth-sphere-container">
-              <div className="earth-sphere">
-                {/* Atmospheric Rim Lighting Layer */}
-                <div className="earth-atmosphere" />
-              </div>
+              <RotatingEarthGlobe size={460} className="webgl-earth-canvas" />
 
               {/* 3D Inclined Orbital Rings */}
               <div className="orbital-ring orbital-ring-primary" />
               <div className="orbital-ring orbital-ring-secondary" />
 
-              {/* Telemetry Hotspot Beacons on Globe */}
-              {/* 1. Assam Live Sensor Ping */}
+              {/* Assam Telemetry Marker */}
               <div className="telemetry-pin pin-assam">
                 <div className="pin-marker" />
                 <div className="pin-leader" />
@@ -187,18 +173,18 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* 2. Maritime Monsoon Surge Indicator */}
+              {/* Ocean Hotspot Marker */}
               <div className="telemetry-pin pin-ocean">
                 <div className="pin-pulse-beacon" />
               </div>
 
-              {/* 3. Southern Peninsula Coordinate Node */}
+              {/* Southern Node Marker */}
               <div className="telemetry-pin pin-south">
                 <div className="pin-yellow-dot" />
               </div>
             </div>
 
-            {/* Technical Georeference Telemetry Meta at bottom right of globe */}
+            {/* Technical Metadata Footer */}
             <div className="globe-tech-meta">
               <span>EARTH OBSERVATION SYSTEM</span>
               <span>GEOREFERENCE: WGS 84</span>
@@ -233,20 +219,20 @@ export default function LoginPage() {
           </div>
         </section>
 
-        {/* Right Tactical "Command Center" Login Card */}
+        {/* Right Tactical "Command Center" Access Card */}
         <aside className="command-card-container">
           <div className="command-card">
             {/* Card Header */}
             <div className="command-card-top">
               <span className="secure-access-label">SECURE ACCESS</span>
-              <div className="lock-icon-box" title="Encrypted Aerospace Grade Channel">
+              <div className="lock-icon-box" title="Encrypted Aerospace Operations Channel">
                 <Lock size={13} />
               </div>
             </div>
 
             <h2 className="command-title">Command center</h2>
             <p className="command-sub">
-              {isSignup ? 'Register new responder credentials' : 'Sign in to your response workspace'}
+              {isSignup ? 'Register new tactical credentials' : 'Sign in to your response workspace'}
             </p>
 
             {/* Error Banner */}
@@ -260,17 +246,32 @@ export default function LoginPage() {
             {/* Sign In Form */}
             <form onSubmit={handleSubmit} className="tactical-form">
               {isSignup && (
-                <div className="form-field-group">
-                  <label className="field-label">OPERATOR NAME</label>
-                  <input
-                    type="text"
-                    className="field-input"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Aditi Kapoor"
-                    required
-                  />
-                </div>
+                <>
+                  <div className="form-field-group">
+                    <label className="field-label">OPERATOR NAME</label>
+                    <input
+                      type="text"
+                      className="field-input"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Aditi Kapoor"
+                      required
+                    />
+                  </div>
+                  <div className="form-field-group">
+                    <label className="field-label">OPERATIONAL ROLE</label>
+                    <select
+                      className="field-input field-select"
+                      value={signupRole}
+                      onChange={(e) => setSignupRole(e.target.value)}
+                    >
+                      <option value="official">Government Official</option>
+                      <option value="admin">NDRF Disaster Commander</option>
+                      <option value="ngo">Relief Coordinator (NGO)</option>
+                      <option value="volunteer">Field First Responder</option>
+                    </select>
+                  </div>
+                </>
               )}
 
               {/* Work Email */}
@@ -310,20 +311,40 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Workspace Role */}
-              <div className="form-field-group">
-                <label className="field-label">WORKSPACE ROLE</label>
-                <div className="select-wrapper">
-                  <select
-                    className="field-input field-select"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
+              {/* Quick Role Selection Pills */}
+              <div className="demo-role-quickselect">
+                <span className="demo-role-label">QUICK SWITCH ROLE:</span>
+                <div className="demo-role-pills">
+                  <button
+                    type="button"
+                    className={`role-pill-btn ${email === 'aditi.kapoor@resqnet.in' ? 'active' : ''}`}
+                    onClick={() => {
+                      setEmail('aditi.kapoor@resqnet.in');
+                      setPassword('aditi123456');
+                    }}
                   >
-                    <option value="official">Government Official</option>
-                    <option value="admin">NDRF Commander (Disaster Ops)</option>
-                    <option value="ngo">Relief Coordinator (NGO)</option>
-                    <option value="volunteer">Field First Responder</option>
-                  </select>
+                    Official (Aditi)
+                  </button>
+                  <button
+                    type="button"
+                    className={`role-pill-btn ${email === 'admin@resqnet.in' ? 'active' : ''}`}
+                    onClick={() => {
+                      setEmail('admin@resqnet.in');
+                      setPassword('admin123456');
+                    }}
+                  >
+                    Commander (Admin)
+                  </button>
+                  <button
+                    type="button"
+                    className={`role-pill-btn ${email === 'ngo@resqnet.in' ? 'active' : ''}`}
+                    onClick={() => {
+                      setEmail('ngo@resqnet.in');
+                      setPassword('ngo123456');
+                    }}
+                  >
+                    NGO Relief
+                  </button>
                 </div>
               </div>
 
@@ -334,7 +355,6 @@ export default function LoginPage() {
                   checked={rememberSession}
                   onChange={(e) => setRememberSession(e.target.checked)}
                 />
-                <span className="checkbox-custom" />
                 <span className="remember-text">Remember this session</span>
               </label>
 
@@ -351,20 +371,20 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Divider */}
+            {/* Tactical Divider */}
             <div className="tactical-divider">
               <span className="divider-line" />
               <span className="divider-text">OR PREVIEW</span>
               <span className="divider-line" />
             </div>
 
-            {/* Quick Demo Login */}
+            {/* Quick Demo Login (Guaranteed Instant Access) */}
             <button
               type="button"
               className="quick-demo-btn"
-              onClick={handleQuickDemo}
+              onClick={() => handleSelectRoleDemo('aditi.kapoor@resqnet.in', 'aditi123456')}
               disabled={loading}
-              title="1-click Instant Demo Sign In for Hackathon Evaluators"
+              title="1-click Instant Demo Access for Evaluators"
             >
               <Sparkles size={14} />
               <span>Quick demo login</span>
@@ -380,7 +400,7 @@ export default function LoginPage() {
               <span>Continue as public citizen</span>
             </button>
 
-            {/* Switch between Sign In / Sign Up */}
+            {/* Sub-footer: Sign In / Sign Up toggle & Settings */}
             <div className="card-sub-footer">
               <button
                 type="button"
@@ -392,7 +412,6 @@ export default function LoginPage() {
                   : 'Need new operator credentials? Sign Up'}
               </button>
 
-              {/* Collapsible Supabase Settings */}
               <button
                 type="button"
                 className="db-settings-btn"
@@ -403,7 +422,7 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {/* Discreet Database Configuration Drawer (Only when opened or unconfigured) */}
+            {/* Discreet Database Configuration Drawer */}
             {(showDbConfig || !isSupabaseConfigured) && (
               <div className="discreet-db-config">
                 <span className="db-config-title">SUPABASE CONNECTION SETUP</span>
@@ -421,7 +440,7 @@ export default function LoginPage() {
                   onChange={(e) => setConfigAnon(e.target.value)}
                   placeholder="eyJhbGciOi..."
                 />
-                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
                   <button
                     type="button"
                     className="db-action-btn primary"

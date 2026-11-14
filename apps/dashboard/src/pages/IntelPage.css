@@ -32,7 +32,7 @@
 
 .intel-panel,
 .intel-feed {
-  background: rgba(13, 19, 36, 0.6);
+  background: rgba(10, 22, 16, 0.82);
   border: 1px solid var(--glass-stroke);
   border-radius: 18px;
   overflow: hidden;

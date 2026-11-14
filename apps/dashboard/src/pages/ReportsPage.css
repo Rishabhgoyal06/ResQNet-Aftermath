@@ -34,8 +34,8 @@
 }
 
 .reports-tab {
-  background: rgba(13, 19, 36, 0.7);
-  border: 1px solid rgba(76, 201, 255, 0.2);
+  background: rgba(10, 22, 16, 0.85);
+  border: 1px solid rgba(132, 169, 140, 0.25);
   padding: 8px 14px;
   border-radius: 999px;
   color: var(--text-secondary);
@@ -48,10 +48,10 @@
 }
 
 .reports-tab.active {
-  background: rgba(76, 201, 255, 0.15);
-  border-color: rgba(76, 201, 255, 0.6);
+  background: rgba(158, 184, 159, 0.2);
+  border-color: rgba(158, 184, 159, 0.6);
   color: var(--text-primary);
-  box-shadow: 0 0 16px rgba(76, 201, 255, 0.2);
+  box-shadow: 0 0 16px rgba(132, 169, 140, 0.25);
 }
 
 .reports-body {
