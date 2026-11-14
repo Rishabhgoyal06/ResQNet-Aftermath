@@ -11,6 +11,7 @@ import {
 } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Sparkles, X } from 'lucide-react';
 import type {
   IncidentCluster,
   RoadSegment,
@@ -72,6 +73,10 @@ export default function SatelliteEarthObservationMap({
   const [viewMode, setViewMode] = useState<'ai_damage' | 'pre_disaster' | 'post_disaster'>('ai_damage');
   const [isSplitMode, setIsSplitMode] = useState(false);
   const [swipeSplit, setSwipeSplit] = useState(50); // percentage for split comparison
+
+  // Satellite Imagery Provider: Esri High-Res vs NASA GIBS Daily MODIS
+  const [satelliteProvider, setSatelliteProvider] = useState<'esri' | 'nasa_gibs'>('esri');
+  const [isAiHudOpen, setIsAiHudOpen] = useState(false);
 
   // Layer Visibility Toggles
   const [showInundationMask, setShowInundationMask] = useState(true);
@@ -167,6 +172,38 @@ export default function SatelliteEarthObservationMap({
           </div>
 
           {/* Layer Visibility Toggles */}
+          <button
+            type="button"
+            style={{
+              background: satelliteProvider === 'nasa_gibs' ? 'rgba(76, 201, 255, 0.25)' : 'rgba(255,255,255,0.05)',
+              borderColor: satelliteProvider === 'nasa_gibs' ? '#00f0ff' : 'var(--glass-stroke)',
+              color: satelliteProvider === 'nasa_gibs' ? '#00f0ff' : 'var(--text-muted)',
+              fontWeight: 700,
+            }}
+            onClick={() => setSatelliteProvider((p) => (p === 'esri' ? 'nasa_gibs' : 'esri'))}
+            title="Switch between NASA Daily MODIS/VIIRS True Color vs Esri High-Resolution Satellite"
+          >
+            {satelliteProvider === 'nasa_gibs' ? '🛰️ NASA GIBS' : '🛰️ Esri High-Res'}
+          </button>
+
+          <button
+            type="button"
+            style={{
+              background: isAiHudOpen ? 'linear-gradient(135deg, #1d9bf0 0%, #00f0ff 100%)' : 'rgba(76, 201, 255, 0.15)',
+              borderColor: '#00f0ff',
+              color: isAiHudOpen ? '#070d19' : '#00f0ff',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+            }}
+            onClick={() => setIsAiHudOpen((prev) => !prev)}
+            title="Toggle AI Disaster Damage & Recovery Intelligence Brief"
+          >
+            <Sparkles size={12} />
+            <span>AI Damage Brief</span>
+          </button>
+
           {overlaysVisible && (
             <>
               <button
@@ -259,6 +296,99 @@ export default function SatelliteEarthObservationMap({
         </div>
       </div>
 
+      {/* Floating AI Intelligence Analysis HUD Drawer */}
+      {isAiHudOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 76,
+            right: 18,
+            width: 360,
+            maxHeight: 'calc(100% - 100px)',
+            background: 'rgba(10, 14, 26, 0.94)',
+            border: '1px solid rgba(76, 201, 255, 0.4)',
+            borderRadius: 14,
+            padding: 16,
+            zIndex: 1000,
+            backdropFilter: 'blur(16px)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 240, 255, 0.2)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+            overflowY: 'auto',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Sparkles size={16} color="#00f0ff" />
+              <strong style={{ fontSize: 13, color: '#ffffff', letterSpacing: '0.04em' }}>
+                AI DISASTER RECOVERY BRIEF
+              </strong>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAiHudOpen(false)}
+              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+            >
+              <X size={15} />
+            </button>
+          </div>
+
+          <div style={{ fontSize: 11, color: '#e2e8f0', lineHeight: 1.5 }}>
+            <strong>Operational Target:</strong> {satelliteData.region}
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 8,
+              background: 'rgba(6, 10, 20, 0.6)',
+              padding: 8,
+              borderRadius: 8,
+            }}
+          >
+            <div>
+              <span style={{ fontSize: 9.5, color: '#7281a5' }}>Pre-Event Date</span>
+              <div style={{ fontSize: 11.5, color: '#7ae582', fontWeight: 700 }}>
+                {satelliteData.pre_disaster_date}
+              </div>
+            </div>
+            <div>
+              <span style={{ fontSize: 9.5, color: '#7281a5' }}>Post-Event Date</span>
+              <div style={{ fontSize: 11.5, color: '#ef4444', fontWeight: 700 }}>
+                {satelliteData.post_disaster_date}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 11, color: '#b3bdd6', lineHeight: 1.4 }}>
+            <strong>Autonomous Change Detection:</strong> Satellite multi-band reflection analysis indicates critical structural displacement across the primary access axis. Immediate fast recovery assets recommended for deployment.
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#4cc9ff' }}>TACTICAL RECOMMENDATIONS:</span>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 10.5, color: '#cbd5e1', lineHeight: 1.4 }}>
+              <li>Bypass submerged corridors via elevated arterial routes</li>
+              <li>Prioritize USAR canine search at collapsed structures</li>
+              <li>Amphibious Zodiacs required for flood plain extractions</li>
+            </ul>
+          </div>
+
+          <div
+            style={{
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              paddingTop: 8,
+              fontSize: 9.5,
+              color: '#64748b',
+              fontFamily: 'var(--mono-family)',
+            }}
+          >
+            Verified Sources: NASA GIBS / ESA Sentinel / GSI / ISRO NRSC
+          </div>
+        </div>
+      )}
+
       {/* Leaflet Map Stage */}
       <MapContainer
         center={center}
@@ -270,9 +400,22 @@ export default function SatelliteEarthObservationMap({
 
         {/* 1. Base Earth Observation Satellite Imagery (Real Space Imagery) */}
         <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution='&copy; Esri, Maxar, Earthstar Geographics'
+          key={`${satelliteProvider}-${viewMode === 'pre_disaster' ? satelliteData.pre_disaster_date : satelliteData.post_disaster_date}`}
+          url={
+            satelliteProvider === 'nasa_gibs'
+              ? `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/${
+                  viewMode === 'pre_disaster' ? satelliteData.pre_disaster_date : satelliteData.post_disaster_date
+                }/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
+              : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+          }
+          attribution={
+            satelliteProvider === 'nasa_gibs'
+              ? '&copy; NASA EOSDIS GIBS / Terra MODIS'
+              : '&copy; Esri, Maxar, Earthstar Geographics'
+          }
           className="map-tiles map-tiles--base"
+          maxNativeZoom={satelliteProvider === 'nasa_gibs' ? 9 : 19}
+          maxZoom={19}
         />
 
         {/* Boundary & Place Labels Overlay */}

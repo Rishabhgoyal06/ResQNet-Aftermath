@@ -20,6 +20,7 @@ import {
   BellRing,
   Send,
   Columns3,
+  History,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import './DashboardLayout.css';
@@ -98,13 +99,22 @@ export default function DashboardLayout() {
                 <span className="folder-name">AFTERMATH AI</span>
               </div>
               <div className="folder-toggle-right">
-                <span className="folder-badge">7 FILES</span>
+                <span className="folder-badge">8 FILES</span>
                 {isAftermathOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </div>
             </button>
 
             {isAftermathOpen && (
               <div className="folder-files-tree">
+                <NavLink
+                  to="/aftermath/history"
+                  className={({ isActive }) => `file-nav-item ${isActive ? 'file-nav-item--active' : ''}`}
+                >
+                  <History size={13} className="file-icon" />
+                  <span className="file-name">Disaster Archive</span>
+                  <span className="file-ext">.hist</span>
+                </NavLink>
+
                 <NavLink
                   to="/aftermath/satellite"
                   className={({ isActive }) =>
