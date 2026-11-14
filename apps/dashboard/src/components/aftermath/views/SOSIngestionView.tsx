@@ -235,7 +235,7 @@ export default function SOSIngestionView({
       <div className="file-kpi-grid">
         <div className="file-kpi-card">
           <span className="file-kpi-label">INGESTED LIVE REPORTS</span>
-          <div className="file-kpi-val" style={{ color: '#4cc9ff' }}>
+          <div className="file-kpi-val" style={{ color: '#9eb89f' }}>
             {recentReports.length}
           </div>
           <span className="file-kpi-sub">Active Field Signals</span>
@@ -243,7 +243,7 @@ export default function SOSIngestionView({
 
         <div className="file-kpi-card">
           <span className="file-kpi-label">AI NLP PREPROCESSOR</span>
-          <div className="file-kpi-val" style={{ color: '#00f0ff' }}>
+          <div className="file-kpi-val" style={{ color: '#a7c9ab' }}>
             GEMINI
           </div>
           <span className="file-kpi-sub">
@@ -263,7 +263,7 @@ export default function SOSIngestionView({
 
         <div className="file-kpi-card">
           <span className="file-kpi-label">PIPELINE STATUS</span>
-          <div className="file-kpi-val" style={{ color: isSuccess ? '#7ae582' : '#4cc9ff' }}>
+          <div className="file-kpi-val" style={{ color: isSuccess ? '#7ae582' : '#9eb89f' }}>
             {isSuccess ? 'INGESTED' : 'READY'}
           </div>
           <span className="file-kpi-sub">Live Leaflet & Cluster Sync</span>
@@ -430,7 +430,7 @@ export default function SOSIngestionView({
           {/* Right: NLP Output & Live Inspection */}
           <div className="nlp-preview-panel">
             <div className="nlp-header">
-              <Sparkles size={16} color="#00f0ff" />
+              <Sparkles size={16} color="#a7c9ab" />
               <h4>GEMINI REAL-TIME NLP INTELLIGENCE PREVIEW</h4>
             </div>
 
@@ -441,15 +441,15 @@ export default function SOSIngestionView({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    background: 'rgba(0, 240, 255, 0.08)',
-                    border: '1px solid rgba(0, 240, 255, 0.2)',
+                    background: 'rgba(167, 201, 171, 0.08)',
+                    border: '1px solid rgba(167, 201, 171, 0.2)',
                     borderRadius: 6,
                     padding: '4px 10px',
                     fontSize: 10,
                     marginBottom: 10,
                   }}
                 >
-                  <span style={{ color: '#00f0ff', fontWeight: 800 }}>
+                  <span style={{ color: '#a7c9ab', fontWeight: 800 }}>
                     ⚡ Powered by Google Gemini ({geminiResult.model_used})
                   </span>
                   <span style={{ color: '#94a3b8' }}>Live NLP Inference</span>

@@ -376,7 +376,7 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
           { color: '#ff5b5b', label: 'Critical', count: severityCounts[5] },
           { color: '#ff8a4c', label: 'High', count: severityCounts[4] },
           { color: '#ffd166', label: 'Important', count: severityCounts[3] },
-          { color: '#4cc9ff', label: 'Moderate', count: severityCounts[2] },
+          { color: '#9eb89f', label: 'Moderate', count: severityCounts[2] },
           { color: '#6a8cff', label: 'Low', count: severityCounts[1] },
         ].map((item) => (
           <div key={item.label} className="map-legend-item">

@@ -275,7 +275,7 @@ export default function AftermathPage() {
               onClick={() => navigate(`/aftermath/${tab.id}`)}
               title={`Open file: ${tab.name}`}
             >
-              <Icon size={13} style={{ color: isActive ? '#00f0ff' : 'inherit' }} />
+              <Icon size={13} style={{ color: isActive ? '#a7c9ab' : 'inherit' }} />
               <span>{tab.name}</span>
               <span className="file-tab-ext">{tab.ext}</span>
             </button>

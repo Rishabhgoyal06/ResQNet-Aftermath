@@ -83,7 +83,7 @@ export default function DisasterHistoryArchiveView({
   const getCategoryIcon = (cat: string) => {
     switch (cat) {
       case 'flood':
-        return <Waves size={14} color="#4cc9ff" />;
+        return <Waves size={14} color="#9eb89f" />;
       case 'cyclone':
         return <Flame size={14} color="#f97316" />;
       case 'landslide':
@@ -102,7 +102,7 @@ export default function DisasterHistoryArchiveView({
       <div className="file-kpi-grid">
         <div className="file-kpi-card">
           <span className="file-kpi-label">HISTORICAL DISASTERS ARCHIVE</span>
-          <div className="file-kpi-val" style={{ color: '#4cc9ff' }}>
+          <div className="file-kpi-val" style={{ color: '#9eb89f' }}>
             {HISTORICAL_INDIA_DISASTERS.length} <small>Verified Events</small>
           </div>
           <span className="file-kpi-sub">5–10 Year Subcontinent Records (2018–2025)</span>
@@ -190,7 +190,7 @@ export default function DisasterHistoryArchiveView({
             justifyContent: 'space-between',
             gap: 12,
             background: 'rgba(8, 12, 24, 0.5)',
-            border: '1px solid rgba(76, 201, 255, 0.1)',
+            border: '1px solid rgba(158, 184, 159, 0.1)',
             borderRadius: 12,
             padding: '8px 14px',
             flexWrap: 'wrap',
@@ -229,7 +229,7 @@ export default function DisasterHistoryArchiveView({
               onChange={(e) => setSelectedYear(e.target.value)}
               style={{
                 background: 'rgba(6, 10, 20, 0.7)',
-                border: '1px solid rgba(76, 201, 255, 0.25)',
+                border: '1px solid rgba(158, 184, 159, 0.25)',
                 color: '#fff',
                 fontSize: 11,
                 padding: '4px 8px',
@@ -255,7 +255,7 @@ export default function DisasterHistoryArchiveView({
                 placeholder="Search state, disaster, district..."
                 style={{
                   background: 'rgba(6, 10, 20, 0.7)',
-                  border: '1px solid rgba(76, 201, 255, 0.2)',
+                  border: '1px solid rgba(158, 184, 159, 0.2)',
                   borderRadius: 8,
                   padding: '4px 10px 4px 26px',
                   color: '#fff',
@@ -280,7 +280,7 @@ export default function DisasterHistoryArchiveView({
                   key={disaster.id}
                   className={`damage-building-card ${isActive ? 'is-selected' : ''}`}
                   style={{
-                    borderColor: isActive ? '#00f0ff' : undefined,
+                    borderColor: isActive ? '#a7c9ab' : undefined,
                     background: isActive ? 'rgba(13, 26, 56, 0.85)' : undefined,
                   }}
                 >
@@ -312,7 +312,7 @@ export default function DisasterHistoryArchiveView({
                   <div className="building-metrics-grid">
                     <div className="building-submetric">
                       <span className="submetric-lbl">Impact Extent</span>
-                      <strong className="submetric-val" style={{ color: '#4cc9ff' }}>
+                      <strong className="submetric-val" style={{ color: '#9eb89f' }}>
                         {disaster.impactedAreaSqKm} km²
                       </strong>
                     </div>
@@ -356,7 +356,7 @@ export default function DisasterHistoryArchiveView({
                     <span>Pre-Date: <strong style={{ color: '#7ae582' }}>{disaster.preSatelliteDate}</strong></span>
                     <span>&harr;</span>
                     <span>Post-Date: <strong style={{ color: '#ef4444' }}>{disaster.postSatelliteDate}</strong></span>
-                    <span style={{ color: '#00f0ff' }}>NASA GIBS</span>
+                    <span style={{ color: '#a7c9ab' }}>NASA GIBS</span>
                   </div>
 
                   {/* Footer & Action */}
@@ -371,7 +371,7 @@ export default function DisasterHistoryArchiveView({
                       onClick={() => onSelectDisaster(disaster)}
                       style={{
                         padding: '6px 14px',
-                        background: isActive ? '#00f0ff' : 'linear-gradient(135deg, #1d9bf0 0%, #00f0ff 100%)',
+                        background: isActive ? '#a7c9ab' : 'linear-gradient(135deg, #7a9c81 0%, #a7c9ab 100%)',
                         color: '#070d19',
                         fontWeight: 800,
                       }}
@@ -413,7 +413,7 @@ export default function DisasterHistoryArchiveView({
               <div
                 style={{
                   background: 'rgba(13, 19, 36, 0.6)',
-                  border: '1px dashed rgba(76, 201, 255, 0.2)',
+                  border: '1px dashed rgba(158, 184, 159, 0.2)',
                   borderRadius: 14,
                   padding: 40,
                   textAlign: 'center',

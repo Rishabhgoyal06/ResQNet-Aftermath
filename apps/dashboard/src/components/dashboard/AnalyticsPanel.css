@@ -96,7 +96,7 @@
 
 .analytics-kpi {
   background: rgba(17, 26, 47, 0.6);
-  border: 1px solid rgba(76, 201, 255, 0.2);
+  border: 1px solid rgba(158, 184, 159, 0.2);
   padding: 12px 14px;
   border-radius: 12px;
   display: flex;
@@ -183,7 +183,7 @@
 .analytics-bar {
   height: 6px;
   border-radius: 999px;
-  background: rgba(76, 201, 255, 0.08);
+  background: rgba(158, 184, 159, 0.08);
   overflow: hidden;
 }
 
@@ -193,7 +193,7 @@
 
 .analytics-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, rgba(76, 201, 255, 0.25), rgba(255, 84, 81, 0.8));
+  background: linear-gradient(90deg, rgba(158, 184, 159, 0.25), rgba(255, 84, 81, 0.8));
 }
 
 :root[data-theme='light'] .analytics-bar-fill {

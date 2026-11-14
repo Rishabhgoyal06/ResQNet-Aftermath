@@ -59,7 +59,7 @@ export default function TriggerMonitorModal({
         {/* Header */}
         <div className="vision-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <BellRing size={20} color="var(--primary, #4cc9ff)" />
+            <BellRing size={20} color="var(--primary, #9eb89f)" />
             <div>
               <h3 className="vision-modal-title">
                 REAL-TIME DISASTER TRIGGERS & OFFICIAL FEEDS
@@ -111,7 +111,7 @@ export default function TriggerMonitorModal({
         <div className="official-alerts-view">
           <div className="alerts-top-strip">
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Globe size={15} color="#00f0ff" />
+              <Globe size={15} color="#a7c9ab" />
               <strong style={{ fontSize: 12, color: '#fff' }}>
                 TRIGGER 2: OFFICIAL DISASTER FEEDS (LIVE USGS & NASA)
               </strong>

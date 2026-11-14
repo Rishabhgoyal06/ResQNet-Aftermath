@@ -59,7 +59,7 @@ export default function DamageAssessmentView({
       <div className="file-kpi-grid">
         <div className="file-kpi-card">
           <span className="file-kpi-label">TOTAL INUNDATED AREA</span>
-          <div className="file-kpi-val" style={{ color: '#4cc9ff' }}>
+          <div className="file-kpi-val" style={{ color: '#9eb89f' }}>
             {inundatedAreaSqKm} <small>km²</small>
           </div>
           <span className="file-kpi-sub">Satellite Change Detection</span>
@@ -97,7 +97,7 @@ export default function DamageAssessmentView({
           alignItems: 'center',
           justifyContent: 'space-between',
           background: 'rgba(10, 14, 26, 0.75)',
-          border: '1px solid rgba(76, 201, 255, 0.3)',
+          border: '1px solid rgba(158, 184, 159, 0.3)',
           borderRadius: 8,
           padding: '8px 14px',
           fontSize: 11.5,
@@ -106,7 +106,7 @@ export default function DamageAssessmentView({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Sparkles size={14} color="#00f0ff" />
+          <Sparkles size={14} color="#a7c9ab" />
           <span>
             <strong>AI Structural Analysis ({disasterRecord?.shortName || 'Zone'}):</strong>{' '}
             {collapsedCount > 0

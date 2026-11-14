@@ -53,7 +53,7 @@ export default function DisasterTriggersView({
       <div className="file-kpi-grid">
         <div className="file-kpi-card">
           <span className="file-kpi-label">GROUND SOS REPORTS</span>
-          <div className="file-kpi-val" style={{ color: '#4cc9ff' }}>
+          <div className="file-kpi-val" style={{ color: '#9eb89f' }}>
             {activeReports.length}
           </div>
           <span className="file-kpi-sub">Continuous Spatial Monitoring</span>
@@ -190,7 +190,7 @@ export default function DisasterTriggersView({
           <div className="trigger-engine-panel">
             <div className="engine-panel-header">
               <div className="engine-title-group">
-                <Globe size={18} color="#00f0ff" />
+                <Globe size={18} color="#a7c9ab" />
                 <div>
                   <h4 className="engine-title">TRIGGER 2: OFFICIAL DISASTER FEEDS</h4>
                   <span className="engine-sub">Live USGS Earthquakes & NASA EONET Catastrophes</span>

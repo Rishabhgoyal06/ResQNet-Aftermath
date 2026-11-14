@@ -47,7 +47,7 @@ export default function RescueMissionsView({
       <div className="file-kpi-grid">
         <div className="file-kpi-card">
           <span className="file-kpi-label">TOTAL RESCUE MISSIONS</span>
-          <div className="file-kpi-val" style={{ color: '#4cc9ff' }}>
+          <div className="file-kpi-val" style={{ color: '#9eb89f' }}>
             {missions.length}
           </div>
           <span className="file-kpi-sub">Fast Recovery Operation Queue</span>

@@ -55,7 +55,7 @@ function HeatLayer({ reports }: { reports: HeatmapReport[] }) {
             max: 1.0,
             gradient: {
               0.05: '#2b59ff',
-              0.25: '#4cc9ff',
+              0.25: '#9eb89f',
               0.45: '#34e2c6',
               0.65: '#ffd166',
               0.8: '#ff8a4c',

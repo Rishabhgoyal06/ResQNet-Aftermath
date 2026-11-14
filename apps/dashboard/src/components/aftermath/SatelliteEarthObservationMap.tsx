@@ -172,7 +172,7 @@ export default function SatelliteEarthObservationMap({
   const changeGeoJsonStyle = useMemo(() => {
     const isPre = viewMode === 'pre_disaster' && !isSplitMode;
     return {
-      fillColor: '#00f0ff',
+      fillColor: '#a7c9ab',
       weight: isPre ? 0 : 2.5,
       opacity: isPre ? 0 : 0.95,
       color: '#00ffff',
@@ -367,7 +367,7 @@ export default function SatelliteEarthObservationMap({
                 onClick={() => setShowInundationMask((prev) => !prev)}
                 title="Toggle Hazard / Flood Mask"
               >
-                <span className="layer-status-dot" style={{ background: '#00f0ff' }} />
+                <span className="layer-status-dot" style={{ background: '#a7c9ab' }} />
                 <span>Mask</span>
               </button>
               <button
@@ -454,8 +454,8 @@ export default function SatelliteEarthObservationMap({
               bottom: 0,
               left: `${swipeSplit}%`,
               width: 4,
-              background: '#00f0ff',
-              boxShadow: '0 0 14px #00f0ff, 0 0 28px rgba(0, 240, 255, 0.5)',
+              background: '#a7c9ab',
+              boxShadow: '0 0 14px #a7c9ab, 0 0 28px rgba(167, 201, 171, 0.5)',
               zIndex: 1000,
               cursor: 'ew-resize',
               transform: 'translateX(-50%)',
@@ -472,12 +472,12 @@ export default function SatelliteEarthObservationMap({
                 height: 36,
                 borderRadius: '50%',
                 background: '#0a0e1a',
-                border: '2px solid #00f0ff',
-                boxShadow: '0 0 16px rgba(0, 240, 255, 0.8)',
+                border: '2px solid #a7c9ab',
+                boxShadow: '0 0 16px rgba(167, 201, 171, 0.8)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#00f0ff',
+                color: '#a7c9ab',
                 fontSize: 10,
                 fontWeight: 900,
                 cursor: 'ew-resize',
@@ -500,12 +500,12 @@ export default function SatelliteEarthObservationMap({
             width: 380,
             maxHeight: 'calc(100% - 100px)',
             background: 'rgba(10, 14, 26, 0.95)',
-            border: '1px solid rgba(76, 201, 255, 0.4)',
+            border: '1px solid rgba(158, 184, 159, 0.4)',
             borderRadius: 14,
             padding: 16,
             zIndex: 1000,
             backdropFilter: 'blur(16px)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 240, 255, 0.25)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(167, 201, 171, 0.25)',
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
@@ -515,7 +515,7 @@ export default function SatelliteEarthObservationMap({
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Sparkles size={16} color="#00f0ff" />
+              <Sparkles size={16} color="#a7c9ab" />
               <strong style={{ fontSize: 13, color: '#ffffff', letterSpacing: '0.04em' }}>
                 TACTICAL AI SITREP
               </strong>
@@ -526,11 +526,11 @@ export default function SatelliteEarthObservationMap({
                 onClick={handleFetchSitrep}
                 disabled={isLoadingSitrep}
                 style={{
-                  background: 'rgba(76, 201, 255, 0.1)',
-                  border: '1px solid rgba(76, 201, 255, 0.3)',
+                  background: 'rgba(158, 184, 159, 0.1)',
+                  border: '1px solid rgba(158, 184, 159, 0.3)',
                   borderRadius: 6,
                   padding: '3px 8px',
-                  color: '#00f0ff',
+                  color: '#a7c9ab',
                   cursor: isLoadingSitrep ? 'wait' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -559,14 +559,14 @@ export default function SatelliteEarthObservationMap({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              background: 'rgba(0, 240, 255, 0.08)',
-              border: '1px solid rgba(0, 240, 255, 0.2)',
+              background: 'rgba(167, 201, 171, 0.08)',
+              border: '1px solid rgba(167, 201, 171, 0.2)',
               borderRadius: 6,
               padding: '4px 10px',
               fontSize: 10,
             }}
           >
-            <span style={{ color: '#00f0ff', fontWeight: 800 }}>
+            <span style={{ color: '#a7c9ab', fontWeight: 800 }}>
               ⚡ Model: {sitrep ? sitrep.model_used : 'Gemini Multi-Model'}
             </span>
             <span style={{ color: '#94a3b8' }}>{sitrep ? sitrep.generated_at : 'Syncing'}</span>
@@ -574,7 +574,7 @@ export default function SatelliteEarthObservationMap({
 
           {isLoadingSitrep ? (
             <div style={{ padding: '24px 0', textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>
-              <RefreshCw size={20} className="spin-animation" style={{ color: '#00f0ff', marginBottom: 8, display: 'inline-block' }} />
+              <RefreshCw size={20} className="spin-animation" style={{ color: '#a7c9ab', marginBottom: 8, display: 'inline-block' }} />
               <div>Gemini AI analyzing satellite change & distress signals...</div>
             </div>
           ) : sitrep ? (
@@ -608,7 +608,7 @@ export default function SatelliteEarthObservationMap({
                 </div>
                 <div>
                   <span style={{ fontSize: 9.5, color: '#7281a5' }}>Target Epicenter</span>
-                  <div style={{ fontSize: 11.5, color: '#00f0ff', fontWeight: 700 }}>
+                  <div style={{ fontSize: 11.5, color: '#a7c9ab', fontWeight: 700 }}>
                     {disasterRecord?.district || satelliteData.region}
                   </div>
                 </div>
@@ -662,7 +662,7 @@ export default function SatelliteEarthObservationMap({
                         background: 'rgba(255,255,255,0.03)',
                         padding: '5px 8px',
                         borderRadius: 5,
-                        borderLeft: '2px solid #00f0ff',
+                        borderLeft: '2px solid #a7c9ab',
                       }}
                     >
                       {dir}
@@ -698,7 +698,7 @@ export default function SatelliteEarthObservationMap({
       <div className="map-legend">
         <div className="map-legend-title">SATELLITE & DAMAGE OVERLAYS</div>
         <div className="map-legend-item">
-          <span className="map-legend-dot" style={{ background: '#00f0ff', boxShadow: '0 0 6px #00f0ff' }} />
+          <span className="map-legend-dot" style={{ background: '#a7c9ab', boxShadow: '0 0 6px #a7c9ab' }} />
           <span>Active Impact / Hazard Mask</span>
         </div>
         <div className="map-legend-item">

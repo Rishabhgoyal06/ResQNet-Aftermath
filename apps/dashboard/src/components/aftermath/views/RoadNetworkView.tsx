@@ -36,7 +36,7 @@ export default function RoadNetworkView({
       <div className="file-kpi-grid">
         <div className="file-kpi-card">
           <span className="file-kpi-label">TOTAL MONITORED ROADS</span>
-          <div className="file-kpi-val" style={{ color: '#4cc9ff' }}>
+          <div className="file-kpi-val" style={{ color: '#9eb89f' }}>
             {roadSegments.length}
           </div>
           <span className="file-kpi-sub">Strategic Evacuation Corridors</span>

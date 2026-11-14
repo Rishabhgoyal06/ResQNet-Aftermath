@@ -133,7 +133,7 @@ export default function LiveDistressIngestionModal({
         {/* Header */}
         <div className="vision-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Radio size={22} color="var(--primary, #4cc9ff)" />
+            <Radio size={22} color="var(--primary, #9eb89f)" />
             <div>
               <h3 className="vision-modal-title">
                 LIVE DISTRESS SIGNAL INGESTION & NLP EXTRACTION PIPELINE
@@ -329,7 +329,7 @@ export default function LiveDistressIngestionModal({
               </div>
             ) : (
               <div className="nlp-idle-box">
-                <Radio size={24} color="var(--primary, #4cc9ff)" />
+                <Radio size={24} color="var(--primary, #9eb89f)" />
                 <p>Click "Run Live AI NLP Extraction" to parse the natural language message into structured JSON entities.</p>
               </div>
             )}

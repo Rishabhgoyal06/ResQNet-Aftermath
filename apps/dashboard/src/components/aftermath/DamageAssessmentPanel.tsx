@@ -88,7 +88,7 @@ export default function DamageAssessmentPanel({
             <span className="metric-lbl">Blocked Roads</span>
           </div>
           <div className="metric-box">
-            <span className="metric-val" style={{ color: 'var(--primary, #4cc9ff)' }}>
+            <span className="metric-val" style={{ color: 'var(--primary, #9eb89f)' }}>
               {missions.length}
             </span>
             <span className="metric-lbl">Rescue Ops</span>
@@ -121,7 +121,7 @@ export default function DamageAssessmentPanel({
         <div className="selected-cluster-banner">
           <div className="banner-top">
             <div className="banner-title">
-              <Compass size={14} color="var(--primary, #4cc9ff)" />
+              <Compass size={14} color="var(--primary, #9eb89f)" />
               <strong>{selectedCluster.title}</strong>
             </div>
             <span className="banner-rps">RPS {selectedCluster.rps_score}/100</span>
@@ -140,7 +140,7 @@ export default function DamageAssessmentPanel({
         <div className="panel-card panel-card--missions">
           <div className="panel-card-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Navigation size={15} color="var(--primary, #4cc9ff)" />
+              <Navigation size={15} color="var(--primary, #9eb89f)" />
               <h5 className="panel-title-sm">PREPARED RESCUE MISSIONS</h5>
             </div>
             <span className="panel-sub-tag">AI RISK-AWARE ROUTING</span>
@@ -239,7 +239,7 @@ export default function DamageAssessmentPanel({
             {/* Road Corridors Sub-block */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <GitBranch size={13} color="var(--primary, #4cc9ff)" />
+                <GitBranch size={13} color="var(--primary, #9eb89f)" />
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#f1f5f9' }}>
                   ROAD ACCESSIBILITY ({passableRoads} PASSABLE, {blockedRoads} BLOCKED)
                 </span>
