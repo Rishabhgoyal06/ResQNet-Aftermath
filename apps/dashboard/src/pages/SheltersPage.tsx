@@ -18,25 +18,24 @@ export default function SheltersPage() {
   const role = user?.role || 'public';
   const canManageShelters = ['admin', 'official', 'ngo'].includes(role);
   const [shelters, setShelters] = useState<Shelter[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!supabase || !isSupabaseConfigured) {
-      setLoading(false);
+    if (!supabase || !isSupabaseConfigured || !canManageShelters) {
       return;
     }
-    if (!canManageShelters) {
-      setLoading(false);
-      return;
-    }
-    supabase
-      .from('shelters')
-      .select('*')
-      .order('name')
-      .then(({ data }) => {
-        if (data) setShelters(data);
-        setLoading(false);
-      });
+    const loadShelters = async () => {
+      if (!supabase) return;
+      try {
+        const { data } = await supabase
+          .from('shelters')
+          .select('*')
+          .order('name');
+        if (data) setShelters(data as Shelter[]);
+      } catch (err) {
+        console.warn('Error fetching shelters:', err);
+      }
+    };
+    loadShelters();
   }, [canManageShelters]);
 
   if (!canManageShelters) {
@@ -50,15 +49,7 @@ export default function SheltersPage() {
   if (!supabase || !isSupabaseConfigured) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b' }}>
-        Supabase not configured. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local` and restart.
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b' }}>
-        Loading shelters...
+        Connecting to emergency shelter registry...
       </div>
     );
   }

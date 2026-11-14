@@ -9,7 +9,7 @@ import { useMemo, useState } from 'react';
 import './DashboardPage.css';
 
 export default function DashboardPage() {
-  const { reports, loading, stats, updateStatus } = useRealtimeSOS();
+  const { reports, stats, updateStatus } = useRealtimeSOS();
   const { analytics, loading: analyticsLoading, error: analyticsError } = useAnalytics();
   const { reports: processedReports } = useProcessedSOS();
   const [showIntel, setShowIntel] = useState(false);
@@ -28,15 +28,6 @@ export default function DashboardPage() {
   const handleMarkResolved = async (id: string) => {
     await updateStatus(id, 'resolved');
   };
-
-  if (loading) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-pulse">◆</div>
-        <p>INITIALIZING COMMAND CENTER...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="dashboard-page">

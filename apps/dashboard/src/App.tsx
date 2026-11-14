@@ -12,30 +12,7 @@ import IntelPage from './pages/IntelPage';
 import AftermathPage from './pages/AftermathPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-
-  // If loading and we don't even have a cached user, show brief tactical splash
-  if (loading && !user) {
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        background: '#07100b',
-        color: '#9eb89f',
-        fontSize: 12,
-        letterSpacing: '0.15em',
-        fontWeight: 700,
-        fontFamily: 'monospace',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 32, color: '#a7c9ab', marginBottom: 16 }}>◆</div>
-          AUTHENTICATING...
-        </div>
-      </div>
-    );
-  }
+  const { user } = useAuth();
 
   if (!user) {
     return <Navigate to="/login" replace />;

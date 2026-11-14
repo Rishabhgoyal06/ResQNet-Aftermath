@@ -27,13 +27,22 @@ const DEMO_ACCOUNTS: Record<string, { role: UserRole; name: string }> = {
   'volunteer@resqnet.in': { role: 'volunteer', name: 'Field First Responder' },
 };
 
+const DEFAULT_DEMO_USER: User = {
+  id: 'usr_aditi_kapoor',
+  email: 'aditi.kapoor@resqnet.in',
+  role: 'official',
+  name: 'Aditi Kapoor (NDMA)',
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('resqnet_session_user');
-      return saved ? JSON.parse(saved) : null;
+      if (saved) return JSON.parse(saved);
+      localStorage.setItem('resqnet_session_user', JSON.stringify(DEFAULT_DEMO_USER));
+      return DEFAULT_DEMO_USER;
     } catch {
-      return null;
+      return DEFAULT_DEMO_USER;
     }
   });
   const [loading, setLoading] = useState(false);
