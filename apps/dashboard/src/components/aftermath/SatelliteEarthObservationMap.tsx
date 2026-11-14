@@ -49,7 +49,7 @@ interface SatelliteEarthObservationMapProps {
   onSelectMission?: (mission: RescueMission) => void;
 }
 
-// Map Controller for smooth flyTo on coordinate change
+// Map Controller for immediate, accurate centering & resize on disaster change
 function MapController({
   center,
   zoom,
@@ -62,8 +62,9 @@ function MapController({
   const map = useMap();
   useEffect(() => {
     if (onMap) onMap(map);
-    map.flyTo(center, zoom, { duration: 1.2 });
-  }, [map, center, zoom, onMap]);
+    map.invalidateSize();
+    map.setView(center, zoom, { animate: false });
+  }, [map, center[0], center[1], zoom, onMap]);
   return null;
 }
 
@@ -82,7 +83,11 @@ export default function SatelliteEarthObservationMap({
   onClusterSelect,
   onBuildingSelect,
 }: SatelliteEarthObservationMapProps) {
-  const [, setMapRef] = useState<L.Map | null>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+
+  const handleMapReady = useCallback((map: L.Map) => {
+    mapInstanceRef.current = map;
+  }, []);
 
   // Satellite Earth Observation View Modes
   const [viewMode, setViewMode] = useState<'ai_damage' | 'pre_disaster' | 'post_disaster'>('ai_damage');
@@ -92,6 +97,15 @@ export default function SatelliteEarthObservationMap({
   // Dragging state for real on-map curtain wipe
   const [isDraggingWipe, setIsDraggingWipe] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+
+  // Disable Leaflet map dragging when dragging the curtain wipe slider to prevent conflict
+  useEffect(() => {
+    if (isDraggingWipe) {
+      mapInstanceRef.current?.dragging?.disable();
+    } else {
+      mapInstanceRef.current?.dragging?.enable();
+    }
+  }, [isDraggingWipe]);
 
   // Satellite Imagery Provider: 'esri' | 'copernicus' | 'nasa_gibs'
   const [satelliteProvider, setSatelliteProvider] = useState<'esri' | 'copernicus' | 'nasa_gibs'>('esri');
@@ -200,6 +214,12 @@ export default function SatelliteEarthObservationMap({
 
   const handleMouseDownWipe = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingWipe(true);
+  };
+
+  const handleTouchStartWipe = (e: React.TouchEvent) => {
+    e.stopPropagation();
     setIsDraggingWipe(true);
   };
 
@@ -214,11 +234,23 @@ export default function SatelliteEarthObservationMap({
       setIsDraggingWipe(false);
     };
 
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) handleWipeMove(e.touches[0].clientX);
+    };
+
+    const handleTouchEnd = () => {
+      setIsDraggingWipe(false);
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
     };
   }, [isDraggingWipe, handleWipeMove]);
 
@@ -461,6 +493,7 @@ export default function SatelliteEarthObservationMap({
               transform: 'translateX(-50%)',
             }}
             onMouseDown={handleMouseDownWipe}
+            onTouchStart={handleTouchStartWipe}
           >
             <div
               style={{
@@ -721,12 +754,13 @@ export default function SatelliteEarthObservationMap({
 
       {/* Leaflet Map Stage */}
       <MapContainer
+        key={disasterRecord?.id || `${centerCoordinates[0]}_${centerCoordinates[1]}`}
         center={centerCoordinates}
         zoom={zoomLevel}
         style={{ width: '100%', height: '100%' }}
         zoomControl={false}
       >
-        <MapController center={centerCoordinates} zoom={zoomLevel} onMap={setMapRef} />
+        <MapController center={centerCoordinates} zoom={zoomLevel} onMap={handleMapReady} />
 
         {/* 1. Base Earth Observation Satellite Imagery */}
         <TileLayer

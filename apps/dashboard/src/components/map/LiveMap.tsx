@@ -37,7 +37,7 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
   const [follow, setFollow] = useState(true);
   const [showResolved, setShowResolved] = useState(false);
   const [mapRef, setMapRef] = useState<L.Map | null>(null);
-  const [baseLayer, setBaseLayer] = useState<'dark' | 'streets' | 'satellite' | 'osm'>('streets');
+  const [baseLayer, setBaseLayer] = useState<'dark' | 'streets' | 'satellite' | 'osm'>('dark');
   const [expandedClusters, setExpandedClusters] = useState<string[]>([]);
   const [recentReports, setRecentReports] = useState<Record<string, number>>({});
   const previousIdsRef = useRef<Set<string> | null>(null);
@@ -137,10 +137,8 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
   const criticalCount = activeReports.filter((r) => r.severity >= 4).length;
 
   const plottedPoints = useMemo(() => {
-    return plottedReports
-      .filter((item) => item.type === 'report')
-      .map((item) => [item.lat, item.lng] as [number, number]);
-  }, [plottedReports]);
+    return visibleReports.map((r) => [r.latitude, r.longitude] as [number, number]);
+  }, [visibleReports]);
 
   const severityCounts = useMemo(() => {
     const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
@@ -171,8 +169,9 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
         <MapController onMap={setMapRef} />
         {baseLayer === 'dark' && (
           <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-            attribution='&copy; Esri, HERE, OpenStreetMap'
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            subdomains="abcd"
+            attribution='&copy; OpenStreetMap contributors &copy; CARTO'
             className="map-tiles map-tiles--base"
           />
         )}

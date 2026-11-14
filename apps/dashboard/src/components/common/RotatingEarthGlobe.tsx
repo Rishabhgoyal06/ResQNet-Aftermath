@@ -13,7 +13,8 @@ export default function RotatingEarthGlobe({ size = 480, className = '' }: Rotat
     if (!canvas) return;
 
     let animationFrameId: number;
-    let gl = canvas.getContext('webgl', { alpha: true, antialias: true });
+    let gl = (canvas.getContext('webgl2', { alpha: true, antialias: true }) ||
+      canvas.getContext('webgl', { alpha: true, antialias: true })) as WebGLRenderingContext | null;
 
     if (!gl) {
       // Fallback 2D render if WebGL unavailable
@@ -218,8 +219,26 @@ export default function RotatingEarthGlobe({ size = 480, className = '' }: Rotat
     textureImage.onload = () => {
       if (!gl) return;
       gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureImage);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+
+      // Scale to guaranteed 1024x512 power-of-two canvas for legal WebGL REPEAT & MIPMAPPING
+      const offscreen = document.createElement('canvas');
+      offscreen.width = 1024;
+      offscreen.height = 512;
+      const octx = offscreen.getContext('2d');
+      if (octx) {
+        octx.drawImage(textureImage, 0, 0, 1024, 512);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, offscreen);
+        try {
+          gl.generateMipmap(gl.TEXTURE_2D);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        } catch {
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        }
+      } else {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureImage);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      }
+
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -254,7 +273,7 @@ export default function RotatingEarthGlobe({ size = 480, className = '' }: Rotat
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
       const deltaX = e.clientX - prevMouseX;
-      rotationAngle += deltaX * 0.006;
+      rotationAngle += deltaX * 0.008;
       prevMouseX = e.clientX;
     };
 
@@ -262,16 +281,37 @@ export default function RotatingEarthGlobe({ size = 480, className = '' }: Rotat
       isDragging = false;
     };
 
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        isDragging = true;
+        prevMouseX = e.touches[0].clientX;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging || e.touches.length === 0) return;
+      const deltaX = e.touches[0].clientX - prevMouseX;
+      rotationAngle += deltaX * 0.008;
+      prevMouseX = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = () => {
+      isDragging = false;
+    };
+
     canvas.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd);
 
     // Render Loop (Smooth 60fps axial rotation)
     const render = () => {
       if (!gl) return;
 
       if (!isDragging) {
-        rotationAngle += 0.0022; // Continual slow rotation
+        rotationAngle += 0.0042; // Clearly noticeable continuous rotation
       }
 
       gl.clearColor(0.0, 0.0, 0.0, 0.0);
@@ -311,6 +351,9 @@ export default function RotatingEarthGlobe({ size = 480, className = '' }: Rotat
       canvas.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
     };
   }, [size]);
 

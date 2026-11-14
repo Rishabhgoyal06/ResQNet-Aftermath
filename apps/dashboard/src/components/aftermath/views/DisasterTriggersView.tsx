@@ -14,8 +14,10 @@ import {
   type SOSSurgeTriggerEvent,
 } from '../../../services/realtimeTriggers';
 import type { ProcessedSOSReport } from '@resqnet/shared-types';
+import type { DisasterEventRecord } from '../../../services/indiaDisasterArchive';
 
 interface DisasterTriggersViewProps {
+  currentDisaster?: DisasterEventRecord;
   activeReports: ProcessedSOSReport[];
   activeSurgeEvent: SOSSurgeTriggerEvent | null;
   onSelectAlert: (alert: OfficialDisasterAlert) => void;
@@ -24,6 +26,7 @@ interface DisasterTriggersViewProps {
 }
 
 export default function DisasterTriggersView({
+  currentDisaster,
   activeReports,
   activeSurgeEvent,
   onSelectAlert,
@@ -181,7 +184,7 @@ export default function DisasterTriggersView({
                 onClick={onSimulateSurge}
               >
                 <Zap size={14} />
-                <span>Simulate Instant SOS Density Surge in North Delhi</span>
+                <span>Simulate Instant SOS Density Surge in {currentDisaster?.shortName || 'Active Disaster Zone'}</span>
               </button>
             </div>
           </div>

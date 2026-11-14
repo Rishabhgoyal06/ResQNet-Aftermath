@@ -229,12 +229,25 @@ export default function AftermathPage() {
             <span>DISASTER ARCHIVE</span>
           </button>
 
+          <select
+            value={currentDisaster.id}
+            onChange={(e) => {
+              const selected = HISTORICAL_INDIA_DISASTERS.find((d) => d.id === e.target.value);
+              if (selected) handleSelectDisasterFromArchive(selected);
+            }}
+            className="aftermath-disaster-select"
+            title="Switch Active Disaster Zone"
+          >
+            {HISTORICAL_INDIA_DISASTERS.map((d) => (
+              <option key={d.id} value={d.id}>
+                📍 {d.shortName} ({d.state})
+              </option>
+            ))}
+          </select>
+
           <div className="aftermath-active-disaster-info">
-            <span className="aftermath-disaster-title">
-              📍 {currentDisaster.title}
-            </span>
             <span className="aftermath-disaster-coords">
-              [{currentDisaster.coordinates[0].toFixed(2)}, {currentDisaster.coordinates[1].toFixed(2)}]
+              [{currentDisaster.coordinates[0].toFixed(2)}°N, {currentDisaster.coordinates[1].toFixed(2)}°E]
             </span>
           </div>
         </div>
@@ -343,6 +356,7 @@ export default function AftermathPage() {
 
       {activeFile === 'triggers' && (
         <DisasterTriggersView
+          currentDisaster={currentDisaster}
           activeReports={activeReports}
           activeSurgeEvent={activeSurgeEvent}
           onSelectAlert={handleSelectOfficialAlert}

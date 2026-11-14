@@ -85,7 +85,7 @@ interface HeatmapViewProps {
 export default function HeatmapView({ reports, style, className }: HeatmapViewProps) {
   const [includeResolved, setIncludeResolved] = useState(false);
   const [mapRef, setMapRef] = useState<L.Map | null>(null);
-  const [baseLayer, setBaseLayer] = useState<'dark' | 'streets' | 'satellite' | 'osm'>('streets');
+  const [baseLayer, setBaseLayer] = useState<'dark' | 'streets' | 'satellite' | 'osm'>('dark');
   // Dark-only map styling.
 
   const visibleReports = useMemo(() => {
@@ -113,8 +113,9 @@ export default function HeatmapView({ reports, style, className }: HeatmapViewPr
         <MapController onMap={setMapRef} />
         {baseLayer === 'dark' && (
           <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-            attribution='&copy; Esri, HERE, OpenStreetMap'
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            subdomains="abcd"
+            attribution='&copy; OpenStreetMap contributors &copy; CARTO'
             className="map-tiles map-tiles--base"
           />
         )}

@@ -7,15 +7,9 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  Settings,
   AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import {
-  isSupabaseConfigured,
-  saveSupabaseConfig,
-  clearSupabaseConfig,
-} from '../services/supabase';
 import RotatingEarthGlobe from '../components/common/RotatingEarthGlobe';
 import './LoginPage.css';
 
@@ -32,11 +26,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // Optional collapsible Supabase connection config
-  const [showDbConfig, setShowDbConfig] = useState(false);
-  const [configUrl, setConfigUrl] = useState('');
-  const [configAnon, setConfigAnon] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -400,7 +389,7 @@ export default function LoginPage() {
               <span>Continue as public citizen</span>
             </button>
 
-            {/* Sub-footer: Sign In / Sign Up toggle & Settings */}
+            {/* Sub-footer: Sign In / Sign Up toggle */}
             <div className="card-sub-footer">
               <button
                 type="button"
@@ -411,53 +400,7 @@ export default function LoginPage() {
                   ? 'Already have an account? Sign In'
                   : 'Need new operator credentials? Sign Up'}
               </button>
-
-              <button
-                type="button"
-                className="db-settings-btn"
-                onClick={() => setShowDbConfig((prev) => !prev)}
-                title="Database Configuration"
-              >
-                <Settings size={12} />
-              </button>
             </div>
-
-            {/* Discreet Database Configuration Drawer */}
-            {(showDbConfig || !isSupabaseConfigured) && (
-              <div className="discreet-db-config">
-                <span className="db-config-title">SUPABASE CONNECTION SETUP</span>
-                <input
-                  className="db-config-input"
-                  type="text"
-                  value={configUrl}
-                  onChange={(e) => setConfigUrl(e.target.value)}
-                  placeholder="https://xxxx.supabase.co"
-                />
-                <input
-                  className="db-config-input"
-                  type="text"
-                  value={configAnon}
-                  onChange={(e) => setConfigAnon(e.target.value)}
-                  placeholder="eyJhbGciOi..."
-                />
-                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                  <button
-                    type="button"
-                    className="db-action-btn primary"
-                    onClick={() => saveSupabaseConfig(configUrl, configAnon)}
-                  >
-                    Save & Sync
-                  </button>
-                  <button
-                    type="button"
-                    className="db-action-btn"
-                    onClick={clearSupabaseConfig}
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </aside>
       </div>
