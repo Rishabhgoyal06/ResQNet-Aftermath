@@ -14,13 +14,18 @@ export function useRealtimeSOS() {
       return;
     }
 
-    const { data } = await supabase
-      .from('sos_reports')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const { data } = await supabase
+        .from('sos_reports')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (data) setReports(data as SOSReport[]);
-    setLoading(false);
+      if (data) setReports(data as SOSReport[]);
+    } catch (err) {
+      console.warn('Error fetching realtime SOS reports:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

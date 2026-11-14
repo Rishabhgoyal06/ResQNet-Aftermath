@@ -40,34 +40,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!supabase || !isSupabaseConfigured) {
+      setLoading(false);
       return;
     }
 
+    // Safety timeout: Never leave the user stuck on "AUTHENTICATING..." for more than 1.5s
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 1500);
+
     // Check existing Supabase session
     setLoading(true);
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        }
+      })
+      .catch((err) => {
+        console.warn('Session check error:', err);
+      })
+      .finally(() => {
+        clearTimeout(safetyTimer);
         setLoading(false);
-      }
-    }).catch(() => {
-      setLoading(false);
-    });
+      });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        fetchProfile(session.user.id);
+        await fetchProfile(session.user.id);
       } else {
         const localUser = localStorage.getItem('resqnet_session_user');
         if (!localUser) {
           setUser(null);
         }
       }
+      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(safetyTimer);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchProfile = async (userId: string) => {
@@ -83,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const u: User = {
           id: data.id,
           email: data.email || '',
-          role: (data.role || 'public') as UserRole,
+          role: (data.role || 'official') as UserRole,
           name: data.name || '',
         };
         setUser(u);
@@ -91,6 +105,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch {
       // Keep existing user if network fails
+    } finally {
+      setLoading(false);
     }
   };
 

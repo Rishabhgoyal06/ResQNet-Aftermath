@@ -16,20 +16,26 @@ export function useAnalytics() {
     }
 
     setLoading(true);
-    const { data, error: fetchError } = await supabase
-      .from('disaster_analytics')
-      .select('*')
-      .order('date_bucket', { ascending: false })
-      .order('total_incidents', { ascending: false });
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('disaster_analytics')
+        .select('*')
+        .order('date_bucket', { ascending: false })
+        .order('total_incidents', { ascending: false });
 
-    if (fetchError) {
-      setError(fetchError.message);
+      if (fetchError) {
+        setError(fetchError.message);
+        setAnalytics([]);
+      } else {
+        setError(null);
+        setAnalytics((data || []) as DisasterAnalytics[]);
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to fetch analytics');
       setAnalytics([]);
-    } else {
-      setError(null);
-      setAnalytics((data || []) as DisasterAnalytics[]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {

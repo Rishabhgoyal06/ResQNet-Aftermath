@@ -16,19 +16,25 @@ export function useProcessedSOS() {
     }
 
     setLoading(true);
-    const { data, error: fetchError } = await supabase
-      .from('sos_reports_processed')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('sos_reports_processed')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (fetchError) {
-      setError(fetchError.message);
+      if (fetchError) {
+        setError(fetchError.message);
+        setReports([]);
+      } else {
+        setError(null);
+        setReports((data || []) as ProcessedSOSReport[]);
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to fetch processed SOS');
       setReports([]);
-    } else {
-      setError(null);
-      setReports((data || []) as ProcessedSOSReport[]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
