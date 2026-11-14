@@ -228,26 +228,30 @@ export default function SatelliteEarthObservationMap({
       ref={mapContainerRef}
       style={{ userSelect: isDraggingWipe ? 'none' : 'auto' }}
     >
-      {/* Top Glassmorphic Control Bar */}
-      <div className="map-overlay">
-        <div className="map-panel map-header-panel">
-          <div className="map-title">COPERNICUS & NASA EARTH OBSERVATION INTELLIGENCE</div>
-          <div className="map-subtitle">
-            {isSplitMode
-              ? `CURTAIN WIPE: PRE (${satelliteData.pre_disaster_date}) vs POST (${satelliteData.post_disaster_date})`
-              : viewMode === 'pre_disaster'
-              ? `BASELINE SATELLITE: ${satelliteData.pre_disaster_date}`
-              : viewMode === 'post_disaster'
-              ? `POST-EVENT SATELLITE: ${satelliteData.post_disaster_date}`
-              : `AI ML DAMAGE ASSESSMENT: ${satelliteData.region}`}
+      {/* Top Glassmorphic Tactical Map Toolbar (Clean, Un-Cramped & Segmented) */}
+      <div className="map-tactical-hud">
+        {/* Left: Disaster Target Context */}
+        <div className="hud-card hud-disaster-info">
+          <div className="hud-disaster-header">
+            <span className="hud-status-led" />
+            <span className="hud-disaster-name">
+              {disasterRecord?.title || satelliteData.region}
+            </span>
+          </div>
+          <div className="hud-disaster-meta">
+            <span>[{centerCoordinates[0].toFixed(3)}°N, {centerCoordinates[1].toFixed(3)}°E]</span>
+            <span className="hud-divider">•</span>
+            <span className="hud-pre-date">PRE: {satelliteData.pre_disaster_date}</span>
+            <span className="hud-divider">↔</span>
+            <span className="hud-post-date">POST: {satelliteData.post_disaster_date}</span>
           </div>
         </div>
 
-        {/* View Mode Switcher */}
-        <div className="map-panel map-viewmode-panel">
+        {/* Center: View Modes Segmented Control */}
+        <div className="hud-card hud-viewmodes">
           <button
             type="button"
-            className={`viewmode-btn ${viewMode === 'pre_disaster' && !isSplitMode ? 'is-active' : ''}`}
+            className={`hud-mode-btn ${viewMode === 'pre_disaster' && !isSplitMode ? 'is-active' : ''}`}
             onClick={() => {
               setViewMode('pre_disaster');
               setIsSplitMode(false);
@@ -257,7 +261,7 @@ export default function SatelliteEarthObservationMap({
           </button>
           <button
             type="button"
-            className={`viewmode-btn ${viewMode === 'post_disaster' && !isSplitMode ? 'is-active' : ''}`}
+            className={`hud-mode-btn ${viewMode === 'post_disaster' && !isSplitMode ? 'is-active' : ''}`}
             onClick={() => {
               setViewMode('post_disaster');
               setIsSplitMode(false);
@@ -267,7 +271,7 @@ export default function SatelliteEarthObservationMap({
           </button>
           <button
             type="button"
-            className={`viewmode-btn ${viewMode === 'ai_damage' && !isSplitMode ? 'is-active' : ''}`}
+            className={`hud-mode-btn ${viewMode === 'ai_damage' && !isSplitMode ? 'is-active' : ''}`}
             onClick={() => {
               setViewMode('ai_damage');
               setIsSplitMode(false);
@@ -277,25 +281,21 @@ export default function SatelliteEarthObservationMap({
           </button>
           <button
             type="button"
-            className={`viewmode-btn split-toggle-btn ${isSplitMode ? 'is-active-split' : ''}`}
+            className={`hud-mode-btn hud-swipe-btn ${isSplitMode ? 'is-active' : ''}`}
             onClick={() => setIsSplitMode((prev) => !prev)}
-            title="Curtain swipe wipe slider comparison"
+            title="Interactive before and after curtain swipe comparison"
           >
-            {isSplitMode ? 'Exit Curtain' : '↔ Curtain Swipe'}
+            ↔ Curtain Swipe
           </button>
         </div>
 
-        {/* Satellite Provider & AI HUD Buttons */}
-        <div className="map-panel map-layers-panel">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        {/* Right: Satellite Providers, AI Brief & Layer Toggles */}
+        <div className="hud-card hud-feed-controls">
+          {/* Provider Pill Switcher */}
+          <div className="hud-provider-group">
             <button
               type="button"
-              style={{
-                background: satelliteProvider === 'esri' ? 'rgba(76, 201, 255, 0.25)' : 'rgba(255,255,255,0.05)',
-                borderColor: satelliteProvider === 'esri' ? '#00f0ff' : 'var(--glass-stroke)',
-                color: satelliteProvider === 'esri' ? '#00f0ff' : 'var(--text-muted)',
-                fontWeight: 700,
-              }}
+              className={`hud-pill-btn ${satelliteProvider === 'esri' ? 'is-active' : ''}`}
               onClick={() => setSatelliteProvider('esri')}
               title="Esri World Imagery High-Res Base"
             >
@@ -303,59 +303,43 @@ export default function SatelliteEarthObservationMap({
             </button>
             <button
               type="button"
-              style={{
-                background: satelliteProvider === 'copernicus' ? 'rgba(0, 240, 255, 0.25)' : 'rgba(255,255,255,0.05)',
-                borderColor: satelliteProvider === 'copernicus' ? '#00f0ff' : 'var(--glass-stroke)',
-                color: satelliteProvider === 'copernicus' ? '#00f0ff' : 'var(--text-muted)',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-              }}
+              className={`hud-pill-btn ${satelliteProvider === 'copernicus' ? 'is-active' : ''}`}
               onClick={() => setSatelliteProvider('copernicus')}
-              title="ESA Copernicus Sentinel-2 L2A Multispectral Optical Feed"
+              title="ESA Copernicus Sentinel-2 L2A Multispectral"
             >
-              🇪🇺 Copernicus Sentinel-2
-              {isLoadingCopernicus && <RefreshCw size={11} className="spin-animation" />}
+              🇪🇺 Sentinel-2 L2A
+              {isLoadingCopernicus && <RefreshCw size={10} className="spin-animation" />}
             </button>
             <button
               type="button"
-              style={{
-                background: satelliteProvider === 'nasa_gibs' ? 'rgba(76, 201, 255, 0.25)' : 'rgba(255,255,255,0.05)',
-                borderColor: satelliteProvider === 'nasa_gibs' ? '#00f0ff' : 'var(--glass-stroke)',
-                color: satelliteProvider === 'nasa_gibs' ? '#00f0ff' : 'var(--text-muted)',
-                fontWeight: 700,
-              }}
+              className={`hud-pill-btn ${satelliteProvider === 'nasa_gibs' ? 'is-active' : ''}`}
               onClick={() => setSatelliteProvider('nasa_gibs')}
-              title="NASA EOSDIS GIBS MODIS Daily Reflectance"
+              title="NASA GIBS MODIS Daily Reflectance"
             >
               🛰️ NASA GIBS
             </button>
           </div>
 
-          {/* Sub-presets for Copernicus */}
+          {/* Sentinel Sub-bands if Copernicus is active */}
           {satelliteProvider === 'copernicus' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 6, borderLeft: '1px solid rgba(255,255,255,0.15)' }}>
+            <div className="hud-subband-group">
               <button
                 type="button"
-                className={`viewmode-btn ${copernicusPreset === 'TRUE_COLOR' ? 'is-active' : ''}`}
-                style={{ fontSize: 10, padding: '3px 8px' }}
+                className={`hud-subband-btn ${copernicusPreset === 'TRUE_COLOR' ? 'is-active' : ''}`}
                 onClick={() => setCopernicusPreset('TRUE_COLOR')}
               >
-                RGB Natural
+                RGB
               </button>
               <button
                 type="button"
-                className={`viewmode-btn ${copernicusPreset === 'FALSE_COLOR' ? 'is-active' : ''}`}
-                style={{ fontSize: 10, padding: '3px 8px' }}
+                className={`hud-subband-btn ${copernicusPreset === 'FALSE_COLOR' ? 'is-active' : ''}`}
                 onClick={() => setCopernicusPreset('FALSE_COLOR')}
               >
-                FalseColor (IR)
+                IR FalseColor
               </button>
               <button
                 type="button"
-                className={`viewmode-btn ${copernicusPreset === 'NDWI_WATER' ? 'is-active' : ''}`}
-                style={{ fontSize: 10, padding: '3px 8px' }}
+                className={`hud-subband-btn ${copernicusPreset === 'NDWI_WATER' ? 'is-active' : ''}`}
                 onClick={() => setCopernicusPreset('NDWI_WATER')}
               >
                 NDWI Water
@@ -363,70 +347,57 @@ export default function SatelliteEarthObservationMap({
             </div>
           )}
 
+          {/* AI Damage Brief Trigger */}
           <button
             type="button"
-            style={{
-              background: isAiHudOpen ? 'linear-gradient(135deg, #1d9bf0 0%, #00f0ff 100%)' : 'rgba(76, 201, 255, 0.15)',
-              borderColor: '#00f0ff',
-              color: isAiHudOpen ? '#070d19' : '#00f0ff',
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-            }}
+            className={`hud-ai-brief-btn ${isAiHudOpen ? 'is-active' : ''}`}
             onClick={() => setIsAiHudOpen((prev) => !prev)}
+            title="Open Gemini AI SITREP Drawer"
           >
             <Sparkles size={12} />
             <span>AI Damage Brief</span>
           </button>
 
+          {/* Layer Visibility Toggles */}
           {overlaysVisible && (
-            <>
+            <div className="hud-layer-toggles">
               <button
                 type="button"
-                style={{
-                  background: showInundationMask ? 'rgba(0, 240, 255, 0.2)' : 'rgba(255,255,255,0.05)',
-                  borderColor: showInundationMask ? '#00f0ff' : 'var(--glass-stroke)',
-                  color: showInundationMask ? '#00f0ff' : 'var(--text-muted)',
-                }}
+                className={`hud-layer-btn ${showInundationMask ? 'is-active' : ''}`}
                 onClick={() => setShowInundationMask((prev) => !prev)}
+                title="Toggle Hazard / Flood Mask"
               >
-                Change Polygon
+                <span className="layer-status-dot" style={{ background: '#00f0ff' }} />
+                <span>Mask</span>
               </button>
               <button
                 type="button"
-                style={{
-                  background: showBuildings ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)',
-                  borderColor: showBuildings ? '#ef4444' : 'var(--glass-stroke)',
-                  color: showBuildings ? '#ef4444' : 'var(--text-muted)',
-                }}
+                className={`hud-layer-btn ${showBuildings ? 'is-active' : ''}`}
                 onClick={() => setShowBuildings((prev) => !prev)}
+                title="Toggle Damaged Buildings"
               >
-                Buildings ({buildings.length})
+                <span className="layer-status-dot" style={{ background: '#ef4444' }} />
+                <span>Buildings ({buildings.length})</span>
               </button>
               <button
                 type="button"
-                style={{
-                  background: showRoads ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255,255,255,0.05)',
-                  borderColor: showRoads ? '#22c55e' : 'var(--glass-stroke)',
-                  color: showRoads ? '#22c55e' : 'var(--text-muted)',
-                }}
+                className={`hud-layer-btn ${showRoads ? 'is-active' : ''}`}
                 onClick={() => setShowRoads((prev) => !prev)}
+                title="Toggle Passable & Blocked Roads"
               >
-                Roads ({roadSegments.length})
+                <span className="layer-status-dot" style={{ background: '#22c55e' }} />
+                <span>Roads ({roadSegments.length})</span>
               </button>
               <button
                 type="button"
-                style={{
-                  background: showMissions ? 'rgba(251, 191, 36, 0.2)' : 'rgba(255,255,255,0.05)',
-                  borderColor: showMissions ? '#fbbf24' : 'var(--glass-stroke)',
-                  color: showMissions ? '#fbbf24' : 'var(--text-muted)',
-                }}
+                className={`hud-layer-btn ${showMissions ? 'is-active' : ''}`}
                 onClick={() => setShowMissions((prev) => !prev)}
+                title="Toggle Active Rescue Routes"
               >
-                Rescue Routes
+                <span className="layer-status-dot" style={{ background: '#fbbf24' }} />
+                <span>Routes</span>
               </button>
-            </>
+            </div>
           )}
         </div>
       </div>

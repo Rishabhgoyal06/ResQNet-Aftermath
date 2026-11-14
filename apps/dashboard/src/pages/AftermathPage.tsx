@@ -218,33 +218,22 @@ export default function AftermathPage() {
         </div>
 
         {/* Active Disaster Pill & Quick Archive Switcher */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            background: 'rgba(6, 10, 20, 0.65)',
-            border: '1px solid rgba(76, 201, 255, 0.3)',
-            borderRadius: 999,
-            padding: '5px 14px 5px 6px',
-          }}
-        >
+        <div className="aftermath-disaster-target">
           <button
             type="button"
-            className="aftermath-scenario-btn is-active"
+            className="aftermath-archive-switch-btn"
             onClick={() => navigate('/aftermath/history')}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px' }}
             title="Switch disaster or view real-time radar in Disaster Archive (.hist)"
           >
             <History size={13} />
             <span>DISASTER ARCHIVE</span>
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 800, color: '#00f0ff' }}>
+          <div className="aftermath-active-disaster-info">
+            <span className="aftermath-disaster-title">
               📍 {currentDisaster.title}
             </span>
-            <span style={{ fontSize: 10.5, color: '#94a3b8' }}>
+            <span className="aftermath-disaster-coords">
               [{currentDisaster.coordinates[0].toFixed(2)}, {currentDisaster.coordinates[1].toFixed(2)}]
             </span>
           </div>
