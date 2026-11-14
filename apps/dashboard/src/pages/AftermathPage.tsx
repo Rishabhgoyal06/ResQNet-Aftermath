@@ -1,19 +1,27 @@
 import { useState, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Cpu,
   Waves,
   Building,
   Database,
-  PlusCircle,
+  Satellite,
+  LifeBuoy,
+  Route,
   BellRing,
+  Send,
+  Columns3,
   AlertTriangle,
 } from 'lucide-react';
 import { useProcessedSOS } from '../hooks/useProcessedSOS';
 import { useRealtimeSOS } from '../hooks/useRealtimeSOS';
 import SatelliteEarthObservationMap from '../components/aftermath/SatelliteEarthObservationMap';
 import DamageAssessmentPanel from '../components/aftermath/DamageAssessmentPanel';
-import LiveDistressIngestionModal from '../components/aftermath/LiveDistressIngestionModal';
-import TriggerMonitorModal from '../components/aftermath/TriggerMonitorModal';
+import DamageAssessmentView from '../components/aftermath/views/DamageAssessmentView';
+import RescueMissionsView from '../components/aftermath/views/RescueMissionsView';
+import RoadNetworkView from '../components/aftermath/views/RoadNetworkView';
+import DisasterTriggersView from '../components/aftermath/views/DisasterTriggersView';
+import SOSIngestionView from '../components/aftermath/views/SOSIngestionView';
 import {
   DELHI_YAMUNA_SATELLITE_DATA,
   FLOOD_BUILDINGS,
@@ -119,16 +127,28 @@ const SPECIALIZED_YAMUNA_SEEDS: ProcessedSOSReport[] = [
   },
 ];
 
+const FILE_TABS = [
+  { id: 'satellite', name: 'Earth Observation', ext: '.map', icon: Satellite },
+  { id: 'damage', name: 'Damage Assessment', ext: '.rep', icon: Building },
+  { id: 'missions', name: 'Rescue Missions', ext: '.ops', icon: LifeBuoy },
+  { id: 'roads', name: 'Road Corridors', ext: '.nav', icon: Route },
+  { id: 'triggers', name: 'Disaster Triggers', ext: '.live', icon: BellRing },
+  { id: 'ingest', name: 'SOS Distress Intake', ext: '.log', icon: Send },
+  { id: 'split', name: 'Dual Workspace', ext: '.dual', icon: Columns3 },
+];
+
 export default function AftermathPage() {
+  const { fileId } = useParams<{ fileId?: string }>();
+  const navigate = useNavigate();
+
+  // Active file view defaults to satellite
+  const activeFile = fileId || 'satellite';
+
   const { reports: processedDbReports } = useProcessedSOS();
   const { reports: rawDbReports } = useRealtimeSOS();
 
   // Catastrophe Scenario Mode:
   const [scenario, setScenario] = useState<'yamuna_flood' | 'earthquake' | 'real_db'>('yamuna_flood');
-
-  // Modals
-  const [isDistressModalOpen, setIsDistressModalOpen] = useState(false);
-  const [isTriggerModalOpen, setIsTriggerModalOpen] = useState(false);
 
   // Dynamically Ingested Real-Time User Reports
   const [liveUserReports, setLiveUserReports] = useState<ProcessedSOSReport[]>([]);
@@ -338,16 +358,17 @@ export default function AftermathPage() {
 
   return (
     <div className="aftermath-page">
-      {/* Top Banner / Tactical Command Bar - Clean & Uncluttered */}
+      {/* Top Banner / Tactical Command Bar */}
       <div className="aftermath-topbar">
         <div className="aftermath-brand">
           <Cpu className="sat-icon" size={22} />
           <div>
             <h2 className="aftermath-title">
-              AFTERMATH <span>COMMAND</span>
+              AFTERMATH <span>FOLDER</span>
             </h2>
             <p className="aftermath-subtitle">
-              Satellite Earth Observation &times; Damage Assessment &times; Fast Recovery
+              📁 aftermath / 📄 {FILE_TABS.find((t) => t.id === activeFile)?.name || 'Earth Observation'}
+              {FILE_TABS.find((t) => t.id === activeFile)?.ext || '.map'}
             </p>
           </div>
         </div>
@@ -392,55 +413,6 @@ export default function AftermathPage() {
           </button>
         </div>
 
-        {/* Simplified Action Triggers: Official Feeds & Distress Ingestion */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            type="button"
-            onClick={() => setIsTriggerModalOpen(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              background: activeSurgeEvent ? 'rgba(239, 68, 68, 0.25)' : 'rgba(76, 201, 255, 0.15)',
-              border: activeSurgeEvent ? '1px solid #ef4444' : '1px solid var(--primary, #4cc9ff)',
-              color: activeSurgeEvent ? '#ef4444' : 'var(--primary, #4cc9ff)',
-              padding: '6px 14px',
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 800,
-              cursor: 'pointer',
-              letterSpacing: '0.04em',
-            }}
-            title="Official Disaster Feeds (USGS / NASA) & Surge Monitor"
-          >
-            <BellRing size={13} />
-            <span>{activeSurgeEvent ? 'SURGE TRIGGER ACTIVE' : 'DISASTER TRIGGERS'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsDistressModalOpen(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(249, 115, 22, 0.25) 100%)',
-              border: '1px solid #ef4444',
-              color: '#ffffff',
-              padding: '6px 14px',
-              borderRadius: 999,
-              fontSize: 11,
-              fontWeight: 800,
-              cursor: 'pointer',
-              letterSpacing: '0.04em',
-            }}
-            title="Test real-time distress ingestion and routing"
-          >
-            <PlusCircle size={13} />
-            <span>INGEST SOS</span>
-          </button>
-        </div>
-
         {/* Status Indicator */}
         <div className="aftermath-live-indicators">
           {activeSurgeEvent ? (
@@ -458,16 +430,36 @@ export default function AftermathPage() {
           ) : (
             <div className="aftermath-pulse">
               <span className="pulse-dot" />
-              <span>LIVE SYNC</span>
+              <span>LIVE PIPELINE ACTIVE</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Main 2-Column Split: Satellite Earth Observation Map & Fast Recovery Ops Console */}
-      <div className="aftermath-grid">
-        {/* Left Column: Full-Height Satellite Earth Observation Map */}
-        <div className="aftermath-left-col">
+      {/* Editor-Style File Tabs Bar (Uncluttered, Single-Click Navigation) */}
+      <div className="aftermath-file-tabs">
+        {FILE_TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeFile === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              className={`aftermath-file-tab ${isActive ? 'is-active' : ''}`}
+              onClick={() => navigate(`/aftermath/${tab.id}`)}
+              title={`Open file: ${tab.name}`}
+            >
+              <Icon size={13} style={{ color: isActive ? '#00f0ff' : 'inherit' }} />
+              <span>{tab.name}</span>
+              <span className="file-tab-ext">{tab.ext}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Main File Content Viewport */}
+      {activeFile === 'satellite' && (
+        <div style={{ flex: 1, minHeight: 0, height: '100%', position: 'relative' }}>
           <SatelliteEarthObservationMap
             clusters={clusters}
             roadSegments={activeRoads}
@@ -482,39 +474,88 @@ export default function AftermathPage() {
             onSelectMission={handleSelectMission}
           />
         </div>
+      )}
 
-        {/* Right Column: Damage Assessment & Fast Recovery Console */}
-        <div className="aftermath-right-col">
-          <DamageAssessmentPanel
-            missions={missions}
-            roadSegments={activeRoads}
-            buildings={activeBuildings}
-            selectedCluster={selectedCluster}
-            selectedBuildingId={selectedBuilding?.id}
-            inundatedAreaSqKm={calculatedArea}
-            onToggleRoad={handleToggleRoad}
-            onApproveMission={handleApproveMission}
-            onSelectBuilding={handleSelectBuilding}
-            onSelectMission={handleSelectMission}
-          />
+      {activeFile === 'damage' && (
+        <DamageAssessmentView
+          buildings={activeBuildings}
+          inundatedAreaSqKm={calculatedArea}
+          scenarioName={scenario}
+          onSelectBuilding={handleSelectBuilding}
+          onNavigateToMap={() => navigate('/aftermath/satellite')}
+        />
+      )}
+
+      {activeFile === 'missions' && (
+        <RescueMissionsView
+          missions={missions}
+          clusters={clusters}
+          approvedMissionIds={approvedMissionIds}
+          onApproveMission={handleApproveMission}
+          onNavigateToMap={() => navigate('/aftermath/satellite')}
+          onSelectMission={handleSelectMission}
+        />
+      )}
+
+      {activeFile === 'roads' && (
+        <RoadNetworkView
+          roadSegments={activeRoads}
+          onToggleRoad={handleToggleRoad}
+          onNavigateToMap={() => navigate('/aftermath/satellite')}
+        />
+      )}
+
+      {activeFile === 'triggers' && (
+        <DisasterTriggersView
+          activeReports={activeReports}
+          activeSurgeEvent={activeSurgeEvent}
+          onSelectAlert={handleSelectOfficialAlert}
+          onSimulateSurge={handleSimulateSurge}
+          onNavigateToMap={() => navigate('/aftermath/satellite')}
+        />
+      )}
+
+      {activeFile === 'ingest' && (
+        <SOSIngestionView
+          onIngestReport={handleIngestLiveReport}
+          onNavigateToMap={() => navigate('/aftermath/satellite')}
+          recentReports={liveUserReports}
+        />
+      )}
+
+      {activeFile === 'split' && (
+        <div className="aftermath-grid">
+          <div className="aftermath-left-col">
+            <SatelliteEarthObservationMap
+              clusters={clusters}
+              roadSegments={activeRoads}
+              resources={activeResources}
+              missions={missions}
+              satelliteData={activeSatelliteData}
+              buildings={activeBuildings}
+              selectedClusterId={selectedCluster?.id}
+              selectedBuildingId={selectedBuilding?.id}
+              onClusterSelect={handleSelectCluster}
+              onBuildingSelect={handleSelectBuilding}
+              onSelectMission={handleSelectMission}
+            />
+          </div>
+          <div className="aftermath-right-col">
+            <DamageAssessmentPanel
+              missions={missions}
+              roadSegments={activeRoads}
+              buildings={activeBuildings}
+              selectedCluster={selectedCluster}
+              selectedBuildingId={selectedBuilding?.id}
+              inundatedAreaSqKm={calculatedArea}
+              onToggleRoad={handleToggleRoad}
+              onApproveMission={handleApproveMission}
+              onSelectBuilding={handleSelectBuilding}
+              onSelectMission={handleSelectMission}
+            />
+          </div>
         </div>
-      </div>
-
-      {/* Clean Modals */}
-      <TriggerMonitorModal
-        isOpen={isTriggerModalOpen}
-        onClose={() => setIsTriggerModalOpen(false)}
-        activeReports={activeReports}
-        activeSurgeEvent={activeSurgeEvent}
-        onSelectAlert={handleSelectOfficialAlert}
-        onSimulateSurge={handleSimulateSurge}
-      />
-
-      <LiveDistressIngestionModal
-        isOpen={isDistressModalOpen}
-        onClose={() => setIsDistressModalOpen(false)}
-        onIngestReport={handleIngestLiveReport}
-      />
+      )}
     </div>
   );
 }

@@ -59,6 +59,7 @@ function AppRoutes() {
       >
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/aftermath" element={<AftermathPage />} />
+        <Route path="/aftermath/:fileId" element={<AftermathPage />} />
         <Route path="/map" element={<MapPage />} />
         <Route path="/heatmap" element={<HeatmapPage />} />
         <Route path="/intel" element={<IntelPage />} />

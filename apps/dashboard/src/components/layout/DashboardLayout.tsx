@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Map,
@@ -8,15 +9,36 @@ import {
   LogOut,
   Globe,
   LineChart,
-  Compass,
+  FolderOpen,
+  Folder,
+  ChevronDown,
+  ChevronRight,
+  Satellite,
+  Building,
+  LifeBuoy,
+  Route,
+  BellRing,
+  Send,
+  Columns3,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import './DashboardLayout.css';
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const role = user?.role || 'public';
   const canManageShelters = ['admin', 'official', 'ngo'].includes(role);
+
+  const isAftermathPath = location.pathname.startsWith('/aftermath');
+  const [isAftermathOpen, setIsAftermathOpen] = useState(true);
+
+  // Auto-expand folder when navigating inside aftermath
+  useEffect(() => {
+    if (isAftermathPath) {
+      setIsAftermathOpen(true);
+    }
+  }, [isAftermathPath]);
 
   return (
     <div className="layout">
@@ -57,10 +79,102 @@ export default function DashboardLayout() {
               <span>Shelters</span>
             </NavLink>
           )}
-          <NavLink to="/aftermath" className={({ isActive }) => `nav-item ${isActive ? 'nav-item--active' : ''}`}>
-            <Compass size={18} style={{ color: '#00f0ff' }} />
-            <span>AFTERMATH AI</span>
-          </NavLink>
+
+          {/* —— AFTERMATH AI Collapsible Folder with Files —— */}
+          <div className={`nav-folder ${isAftermathPath ? 'nav-folder--active' : ''}`}>
+            <button
+              type="button"
+              className="folder-toggle-btn"
+              onClick={() => setIsAftermathOpen((prev) => !prev)}
+              aria-expanded={isAftermathOpen}
+              title="Click to expand/collapse Aftermath AI reports & tools"
+            >
+              <div className="folder-toggle-left">
+                {isAftermathOpen ? (
+                  <FolderOpen size={17} className="folder-icon folder-icon--open" />
+                ) : (
+                  <Folder size={17} className="folder-icon" />
+                )}
+                <span className="folder-name">AFTERMATH AI</span>
+              </div>
+              <div className="folder-toggle-right">
+                <span className="folder-badge">7 FILES</span>
+                {isAftermathOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </div>
+            </button>
+
+            {isAftermathOpen && (
+              <div className="folder-files-tree">
+                <NavLink
+                  to="/aftermath/satellite"
+                  className={({ isActive }) =>
+                    `file-nav-item ${
+                      isActive || location.pathname === '/aftermath' ? 'file-nav-item--active' : ''
+                    }`
+                  }
+                >
+                  <Satellite size={13} className="file-icon" />
+                  <span className="file-name">Earth Observation</span>
+                  <span className="file-ext">.map</span>
+                </NavLink>
+
+                <NavLink
+                  to="/aftermath/damage"
+                  className={({ isActive }) => `file-nav-item ${isActive ? 'file-nav-item--active' : ''}`}
+                >
+                  <Building size={13} className="file-icon" />
+                  <span className="file-name">Damage Assessment</span>
+                  <span className="file-ext">.rep</span>
+                </NavLink>
+
+                <NavLink
+                  to="/aftermath/missions"
+                  className={({ isActive }) => `file-nav-item ${isActive ? 'file-nav-item--active' : ''}`}
+                >
+                  <LifeBuoy size={13} className="file-icon" />
+                  <span className="file-name">Rescue Missions</span>
+                  <span className="file-ext">.ops</span>
+                </NavLink>
+
+                <NavLink
+                  to="/aftermath/roads"
+                  className={({ isActive }) => `file-nav-item ${isActive ? 'file-nav-item--active' : ''}`}
+                >
+                  <Route size={13} className="file-icon" />
+                  <span className="file-name">Road Corridors</span>
+                  <span className="file-ext">.nav</span>
+                </NavLink>
+
+                <NavLink
+                  to="/aftermath/triggers"
+                  className={({ isActive }) => `file-nav-item ${isActive ? 'file-nav-item--active' : ''}`}
+                >
+                  <BellRing size={13} className="file-icon" />
+                  <span className="file-name">Disaster Triggers</span>
+                  <span className="file-ext">.live</span>
+                </NavLink>
+
+                <NavLink
+                  to="/aftermath/ingest"
+                  className={({ isActive }) => `file-nav-item ${isActive ? 'file-nav-item--active' : ''}`}
+                >
+                  <Send size={13} className="file-icon" />
+                  <span className="file-name">SOS Distress Intake</span>
+                  <span className="file-ext">.log</span>
+                </NavLink>
+
+                <NavLink
+                  to="/aftermath/split"
+                  className={({ isActive }) => `file-nav-item ${isActive ? 'file-nav-item--active' : ''}`}
+                >
+                  <Columns3 size={13} className="file-icon" />
+                  <span className="file-name">Dual Workspace</span>
+                  <span className="file-ext">.dual</span>
+                </NavLink>
+              </div>
+            )}
+          </div>
+
           <NavLink to="/public" className={({ isActive }) => `nav-item ${isActive ? 'nav-item--active' : ''}`}>
             <Globe size={18} />
             <span>Public View</span>
