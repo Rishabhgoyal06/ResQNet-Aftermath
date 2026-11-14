@@ -4,13 +4,17 @@ import {
   Compass,
   Filter,
   MapPin,
+  Sparkles,
+  ShieldAlert,
 } from 'lucide-react';
 import type { BuildingDamageItem } from '@resqnet/shared-types';
+import type { DisasterEventRecord } from '../../../services/indiaDisasterArchive';
 
 interface DamageAssessmentViewProps {
   buildings: BuildingDamageItem[];
   inundatedAreaSqKm: number;
   scenarioName?: string;
+  disasterRecord?: DisasterEventRecord;
   onSelectBuilding?: (building: BuildingDamageItem) => void;
   onNavigateToMap: () => void;
 }
@@ -18,6 +22,7 @@ interface DamageAssessmentViewProps {
 export default function DamageAssessmentView({
   buildings,
   inundatedAreaSqKm,
+  disasterRecord,
   onSelectBuilding,
   onNavigateToMap,
 }: DamageAssessmentViewProps) {
@@ -82,6 +87,38 @@ export default function DamageAssessmentView({
             {totalTrapped}
           </div>
           <span className="file-kpi-sub">Verified via Ground Reports</span>
+        </div>
+      </div>
+
+      {/* AI Structural Vulnerability Intelligence Banner */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: 'rgba(10, 14, 26, 0.75)',
+          border: '1px solid rgba(76, 201, 255, 0.3)',
+          borderRadius: 8,
+          padding: '8px 14px',
+          fontSize: 11.5,
+          color: '#cbd5e1',
+          gap: 12,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Sparkles size={14} color="#00f0ff" />
+          <span>
+            <strong>AI Structural Analysis ({disasterRecord?.shortName || 'Zone'}):</strong>{' '}
+            {collapsedCount > 0
+              ? `${collapsedCount} masonry structures collapsed with high void cavity risk. Immediate USAR acoustic dispatch required.`
+              : `All identified structures intact; localized perimeter monitoring active.`}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <ShieldAlert size={13} color="#ef4444" />
+          <span style={{ color: '#ef4444', fontWeight: 700, fontSize: 11 }}>
+            Vulnerability Index: {Math.min(100, Math.round(((collapsedCount * 2 + severeCount) / Math.max(1, buildings.length)) * 100))}%
+          </span>
         </div>
       </div>
 

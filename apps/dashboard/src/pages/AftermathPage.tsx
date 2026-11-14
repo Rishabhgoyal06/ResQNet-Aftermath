@@ -313,6 +313,7 @@ export default function AftermathPage() {
             missions={missions}
             satelliteData={activeSatelliteData}
             buildings={activeBuildings}
+            disasterRecord={currentDisaster}
             selectedClusterId={selectedCluster?.id}
             selectedBuildingId={selectedBuilding?.id}
             onClusterSelect={handleSelectCluster}
@@ -326,6 +327,7 @@ export default function AftermathPage() {
         <DamageAssessmentView
           buildings={activeBuildings}
           inundatedAreaSqKm={currentDisaster.impactedAreaSqKm}
+          disasterRecord={currentDisaster}
           onSelectBuilding={handleSelectBuilding}
           onNavigateToMap={() => navigate('/aftermath/satellite')}
         />
@@ -362,6 +364,7 @@ export default function AftermathPage() {
 
       {activeFile === 'ingest' && (
         <SOSIngestionView
+          currentDisaster={currentDisaster}
           onIngestReport={handleIngestLiveReport}
           onNavigateToMap={() => navigate('/aftermath/satellite')}
           recentReports={liveUserReports}
@@ -380,6 +383,7 @@ export default function AftermathPage() {
               missions={missions}
               satelliteData={activeSatelliteData}
               buildings={activeBuildings}
+              disasterRecord={currentDisaster}
               selectedClusterId={selectedCluster?.id}
               selectedBuildingId={selectedBuilding?.id}
               onClusterSelect={handleSelectCluster}

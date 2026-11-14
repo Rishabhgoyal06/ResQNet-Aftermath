@@ -8,11 +8,12 @@ import {
   Popup,
   Tooltip,
   Pane,
+  ImageOverlay,
   useMap,
 } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Sparkles, X } from 'lucide-react';
+import { Sparkles, X, RefreshCw, ShieldAlert, Route, Info } from 'lucide-react';
 import type {
   IncidentCluster,
   RoadSegment,
@@ -21,6 +22,13 @@ import type {
   SatelliteDataset,
   BuildingDamageItem,
 } from '@resqnet/shared-types';
+import { generateDisasterSITREP, type DisasterSITREP } from '../../services/geminiService';
+import {
+  fetchCopernicusSentinelImage,
+  type ProcessedSentinelImage,
+  type SentinelPreset,
+} from '../../services/copernicusService';
+import type { DisasterEventRecord } from '../../services/indiaDisasterArchive';
 import '../map/MapStyles.css';
 import './AftermathComponents.css';
 
@@ -33,6 +41,7 @@ interface SatelliteEarthObservationMapProps {
   missions: RescueMission[];
   satelliteData: SatelliteDataset;
   buildings?: BuildingDamageItem[];
+  disasterRecord?: DisasterEventRecord;
   selectedClusterId?: string;
   selectedBuildingId?: string;
   onClusterSelect?: (cluster: IncidentCluster) => void;
@@ -67,6 +76,7 @@ export default function SatelliteEarthObservationMap({
   missions,
   satelliteData,
   buildings = [],
+  disasterRecord,
   selectedClusterId,
   selectedBuildingId,
   onClusterSelect,
@@ -83,15 +93,80 @@ export default function SatelliteEarthObservationMap({
   const [isDraggingWipe, setIsDraggingWipe] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
-  // Satellite Imagery Provider
-  const [satelliteProvider, setSatelliteProvider] = useState<'esri' | 'nasa_gibs'>('esri');
+  // Satellite Imagery Provider: 'esri' | 'copernicus' | 'nasa_gibs'
+  const [satelliteProvider, setSatelliteProvider] = useState<'esri' | 'copernicus' | 'nasa_gibs'>('esri');
+  const [copernicusPreset, setCopernicusPreset] = useState<SentinelPreset>('TRUE_COLOR');
+  const [copernicusImage, setCopernicusImage] = useState<ProcessedSentinelImage | null>(null);
+  const [isLoadingCopernicus, setIsLoadingCopernicus] = useState(false);
+
+  // Gemini AI Tactical SITREP
   const [isAiHudOpen, setIsAiHudOpen] = useState(false);
+  const [sitrep, setSitrep] = useState<DisasterSITREP | null>(null);
+  const [isLoadingSitrep, setIsLoadingSitrep] = useState(false);
 
   // Layer Visibility Toggles
   const [showInundationMask, setShowInundationMask] = useState(true);
   const [showBuildings, setShowBuildings] = useState(true);
   const [showRoads, setShowRoads] = useState(true);
   const [showMissions, setShowMissions] = useState(true);
+
+  // Fetch Copernicus Sentinel-2 L2A optical image when provider is selected or preset changes
+  useEffect(() => {
+    if (satelliteProvider !== 'copernicus') return;
+
+    let isMounted = true;
+    setIsLoadingCopernicus(true);
+
+    fetchCopernicusSentinelImage(
+      centerCoordinates,
+      copernicusPreset,
+      satelliteData.post_disaster_date
+    )
+      .then((img) => {
+        if (isMounted) {
+          setCopernicusImage(img);
+          setIsLoadingCopernicus(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setIsLoadingCopernicus(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [satelliteProvider, copernicusPreset, centerCoordinates, satelliteData.post_disaster_date]);
+
+  // Fetch or refresh Gemini Tactical SITREP
+  const handleFetchSitrep = useCallback(async () => {
+    if (!disasterRecord) return;
+    setIsLoadingSitrep(true);
+    try {
+      const result = await generateDisasterSITREP(
+        disasterRecord,
+        clusters,
+        buildings,
+        roadSegments
+      );
+      setSitrep(result);
+    } catch (e) {
+      console.warn('Failed to generate Gemini SITREP:', e);
+    } finally {
+      setIsLoadingSitrep(false);
+    }
+  }, [disasterRecord, clusters, buildings, roadSegments]);
+
+  // Automatically trigger SITREP when AI HUD is opened if not yet loaded
+  useEffect(() => {
+    if (isAiHudOpen && !sitrep && !isLoadingSitrep && disasterRecord) {
+      handleFetchSitrep();
+    }
+  }, [isAiHudOpen, sitrep, isLoadingSitrep, disasterRecord, handleFetchSitrep]);
+
+  // Clear cached sitrep on disaster change so it refreshes dynamically
+  useEffect(() => {
+    setSitrep(null);
+  }, [disasterRecord?.id]);
 
   // GeoJSON style for satellite detected change polygon
   const changeGeoJsonStyle = useMemo(() => {
@@ -212,19 +287,81 @@ export default function SatelliteEarthObservationMap({
 
         {/* Satellite Provider & AI HUD Buttons */}
         <div className="map-panel map-layers-panel">
-          <button
-            type="button"
-            style={{
-              background: satelliteProvider === 'nasa_gibs' ? 'rgba(76, 201, 255, 0.25)' : 'rgba(255,255,255,0.05)',
-              borderColor: satelliteProvider === 'nasa_gibs' ? '#00f0ff' : 'var(--glass-stroke)',
-              color: satelliteProvider === 'nasa_gibs' ? '#00f0ff' : 'var(--text-muted)',
-              fontWeight: 700,
-            }}
-            onClick={() => setSatelliteProvider((p) => (p === 'esri' ? 'nasa_gibs' : 'esri'))}
-            title="Switch between NASA Daily MODIS/VIIRS True Color vs Esri High-Resolution Satellite"
-          >
-            {satelliteProvider === 'nasa_gibs' ? '🛰️ NASA GIBS (True Color)' : '🛰️ Esri High-Res'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              type="button"
+              style={{
+                background: satelliteProvider === 'esri' ? 'rgba(76, 201, 255, 0.25)' : 'rgba(255,255,255,0.05)',
+                borderColor: satelliteProvider === 'esri' ? '#00f0ff' : 'var(--glass-stroke)',
+                color: satelliteProvider === 'esri' ? '#00f0ff' : 'var(--text-muted)',
+                fontWeight: 700,
+              }}
+              onClick={() => setSatelliteProvider('esri')}
+              title="Esri World Imagery High-Res Base"
+            >
+              🛰️ Esri High-Res
+            </button>
+            <button
+              type="button"
+              style={{
+                background: satelliteProvider === 'copernicus' ? 'rgba(0, 240, 255, 0.25)' : 'rgba(255,255,255,0.05)',
+                borderColor: satelliteProvider === 'copernicus' ? '#00f0ff' : 'var(--glass-stroke)',
+                color: satelliteProvider === 'copernicus' ? '#00f0ff' : 'var(--text-muted)',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+              onClick={() => setSatelliteProvider('copernicus')}
+              title="ESA Copernicus Sentinel-2 L2A Multispectral Optical Feed"
+            >
+              🇪🇺 Copernicus Sentinel-2
+              {isLoadingCopernicus && <RefreshCw size={11} className="spin-animation" />}
+            </button>
+            <button
+              type="button"
+              style={{
+                background: satelliteProvider === 'nasa_gibs' ? 'rgba(76, 201, 255, 0.25)' : 'rgba(255,255,255,0.05)',
+                borderColor: satelliteProvider === 'nasa_gibs' ? '#00f0ff' : 'var(--glass-stroke)',
+                color: satelliteProvider === 'nasa_gibs' ? '#00f0ff' : 'var(--text-muted)',
+                fontWeight: 700,
+              }}
+              onClick={() => setSatelliteProvider('nasa_gibs')}
+              title="NASA EOSDIS GIBS MODIS Daily Reflectance"
+            >
+              🛰️ NASA GIBS
+            </button>
+          </div>
+
+          {/* Sub-presets for Copernicus */}
+          {satelliteProvider === 'copernicus' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 6, borderLeft: '1px solid rgba(255,255,255,0.15)' }}>
+              <button
+                type="button"
+                className={`viewmode-btn ${copernicusPreset === 'TRUE_COLOR' ? 'is-active' : ''}`}
+                style={{ fontSize: 10, padding: '3px 8px' }}
+                onClick={() => setCopernicusPreset('TRUE_COLOR')}
+              >
+                RGB Natural
+              </button>
+              <button
+                type="button"
+                className={`viewmode-btn ${copernicusPreset === 'FALSE_COLOR' ? 'is-active' : ''}`}
+                style={{ fontSize: 10, padding: '3px 8px' }}
+                onClick={() => setCopernicusPreset('FALSE_COLOR')}
+              >
+                FalseColor (IR)
+              </button>
+              <button
+                type="button"
+                className={`viewmode-btn ${copernicusPreset === 'NDWI_WATER' ? 'is-active' : ''}`}
+                style={{ fontSize: 10, padding: '3px 8px' }}
+                onClick={() => setCopernicusPreset('NDWI_WATER')}
+              >
+                NDWI Water
+              </button>
+            </div>
+          )}
 
           <button
             type="button"
@@ -389,68 +526,185 @@ export default function SatelliteEarthObservationMap({
             position: 'absolute',
             top: 76,
             right: 18,
-            width: 360,
+            width: 380,
             maxHeight: 'calc(100% - 100px)',
-            background: 'rgba(10, 14, 26, 0.94)',
+            background: 'rgba(10, 14, 26, 0.95)',
             border: '1px solid rgba(76, 201, 255, 0.4)',
             borderRadius: 14,
             padding: 16,
             zIndex: 1000,
             backdropFilter: 'blur(16px)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 240, 255, 0.2)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 240, 255, 0.25)',
             display: 'flex',
             flexDirection: 'column',
-            gap: 10,
+            gap: 12,
             overflowY: 'auto',
           }}
         >
+          {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Sparkles size={16} color="#00f0ff" />
               <strong style={{ fontSize: 13, color: '#ffffff', letterSpacing: '0.04em' }}>
-                AI DISASTER RECOVERY BRIEF
+                TACTICAL AI SITREP
               </strong>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsAiHudOpen(false)}
-              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
-            >
-              <X size={15} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button
+                type="button"
+                onClick={handleFetchSitrep}
+                disabled={isLoadingSitrep}
+                style={{
+                  background: 'rgba(76, 201, 255, 0.1)',
+                  border: '1px solid rgba(76, 201, 255, 0.3)',
+                  borderRadius: 6,
+                  padding: '3px 8px',
+                  color: '#00f0ff',
+                  cursor: isLoadingSitrep ? 'wait' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                }}
+                title="Regenerate SITREP using Gemini"
+              >
+                <RefreshCw size={10} className={isLoadingSitrep ? 'spin-animation' : ''} />
+                <span>{isLoadingSitrep ? 'Analyzing...' : 'Refresh'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAiHudOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <X size={15} />
+              </button>
+            </div>
           </div>
 
-          <div style={{ fontSize: 11, color: '#e2e8f0', lineHeight: 1.5 }}>
-            <strong>Target Epicenter:</strong> {satelliteData.region} [{centerCoordinates[0].toFixed(3)}, {centerCoordinates[1].toFixed(3)}]
-          </div>
-
+          {/* Model Badge */}
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 8,
-              background: 'rgba(6, 10, 20, 0.6)',
-              padding: 8,
-              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(0, 240, 255, 0.08)',
+              border: '1px solid rgba(0, 240, 255, 0.2)',
+              borderRadius: 6,
+              padding: '4px 10px',
+              fontSize: 10,
             }}
           >
-            <div>
-              <span style={{ fontSize: 9.5, color: '#7281a5' }}>Pre-Event Baseline</span>
-              <div style={{ fontSize: 11.5, color: '#7ae582', fontWeight: 700 }}>
-                {satelliteData.pre_disaster_date}
-              </div>
-            </div>
-            <div>
-              <span style={{ fontSize: 9.5, color: '#7281a5' }}>Post-Event Observation</span>
-              <div style={{ fontSize: 11.5, color: '#ef4444', fontWeight: 700 }}>
-                {satelliteData.post_disaster_date}
-              </div>
-            </div>
+            <span style={{ color: '#00f0ff', fontWeight: 800 }}>
+              ⚡ Model: {sitrep ? sitrep.model_used : 'Gemini Multi-Model'}
+            </span>
+            <span style={{ color: '#94a3b8' }}>{sitrep ? sitrep.generated_at : 'Syncing'}</span>
           </div>
 
-          <div style={{ fontSize: 11, color: '#b3bdd6', lineHeight: 1.4 }}>
-            <strong>Operational Assessment:</strong> Multi-band satellite change extraction indicates high structural displacement. Fast recovery assets are mapped and route passability is synchronized in real time.
-          </div>
+          {isLoadingSitrep ? (
+            <div style={{ padding: '24px 0', textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>
+              <RefreshCw size={20} className="spin-animation" style={{ color: '#00f0ff', marginBottom: 8, display: 'inline-block' }} />
+              <div>Gemini AI analyzing satellite change & distress signals...</div>
+            </div>
+          ) : sitrep ? (
+            <>
+              {/* Headline & Summary */}
+              <div>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: 13, color: '#f8fafc', fontWeight: 800 }}>
+                  {sitrep.headline}
+                </h4>
+                <p style={{ margin: 0, fontSize: 11, color: '#b3bdd6', lineHeight: 1.5 }}>
+                  {sitrep.executive_summary}
+                </p>
+              </div>
+
+              {/* Trapped & Impact KPI */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 8,
+                  background: 'rgba(6, 10, 20, 0.6)',
+                  padding: 8,
+                  borderRadius: 8,
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: 9.5, color: '#7281a5' }}>Trapped Civilians</span>
+                  <div style={{ fontSize: 13, color: '#ffd166', fontWeight: 800 }}>
+                    {sitrep.estimated_trapped} Citizens
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: 9.5, color: '#7281a5' }}>Target Epicenter</span>
+                  <div style={{ fontSize: 11.5, color: '#00f0ff', fontWeight: 700 }}>
+                    {disasterRecord?.district || satelliteData.region}
+                  </div>
+                </div>
+              </div>
+
+              {/* Critical Hazards */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                  <ShieldAlert size={12} color="#ef4444" />
+                  <strong style={{ fontSize: 10.5, color: '#ef4444', letterSpacing: '0.04em' }}>
+                    IMMINENT HAZARDS
+                  </strong>
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 16, fontSize: 10.5, color: '#e2e8f0', lineHeight: 1.45 }}>
+                  {sitrep.critical_hazards.map((h, i) => (
+                    <li key={i}>{h}</li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Priority Rescue Corridors */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                  <Route size={12} color="#22c55e" />
+                  <strong style={{ fontSize: 10.5, color: '#22c55e', letterSpacing: '0.04em' }}>
+                    PRIORITY CORRIDORS
+                  </strong>
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 16, fontSize: 10.5, color: '#e2e8f0', lineHeight: 1.45 }}>
+                  {sitrep.priority_routes.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Tactical Directives */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                  <Info size={12} color="#38bdf8" />
+                  <strong style={{ fontSize: 10.5, color: '#38bdf8', letterSpacing: '0.04em' }}>
+                    NEXT 24H DIRECTIVES
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {sitrep.tactical_directives.map((dir, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        fontSize: 10,
+                        color: '#cbd5e1',
+                        background: 'rgba(255,255,255,0.03)',
+                        padding: '5px 8px',
+                        borderRadius: 5,
+                        borderLeft: '2px solid #00f0ff',
+                      }}
+                    >
+                      {dir}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '16px 0', color: '#64748b', fontSize: 11 }}>
+              Click Refresh to generate live AI SITREP briefing.
+            </div>
+          )}
 
           <div
             style={{
@@ -459,9 +713,12 @@ export default function SatelliteEarthObservationMap({
               fontSize: 9.5,
               color: '#64748b',
               fontFamily: 'var(--mono-family)',
+              display: 'flex',
+              justifyContent: 'space-between',
             }}
           >
-            Telemetry: NASA GIBS / UN GDACS / USGS Global Seismology
+            <span>Telemetry: CDSE Sentinel-2 / NASA GIBS</span>
+            <span>NDMA Operational AI</span>
           </div>
         </div>
       )}
@@ -513,6 +770,16 @@ export default function SatelliteEarthObservationMap({
           maxNativeZoom={satelliteProvider === 'nasa_gibs' ? 9 : 19}
           maxZoom={19}
         />
+
+        {/* 1.5 Real Copernicus Sentinel-2 L2A Processed Image Overlay */}
+        {satelliteProvider === 'copernicus' && copernicusImage && (
+          <ImageOverlay
+            bounds={copernicusImage.leafletBounds}
+            url={copernicusImage.imageUrl}
+            opacity={0.92}
+            zIndex={300}
+          />
+        )}
 
         {/* Boundary & Place Labels Overlay */}
         <TileLayer
