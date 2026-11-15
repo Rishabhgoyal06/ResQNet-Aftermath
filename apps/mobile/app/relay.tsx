@@ -13,7 +13,6 @@ import {
   stopRelayListener,
   openBluetoothSettings,
   getRelayName,
-  isNativeBluetoothSupported,
 } from '../services/relayService';
 import { getPendingCount } from '../services/offlineQueue';
 import { isSupabaseConfigured } from '../services/supabase';
@@ -27,7 +26,7 @@ interface StatusBannerData {
 
 export default function RelayScreen() {
   const { isConnected } = useNetworkStatus();
-  const [relayActive, setRelayActive] = useState(true);
+  const [bluetoothOn, setBluetoothOn] = useState(true);
   const [listenerState, setListenerState] = useState<RelayState>('idle');
   const [devices, setDevices] = useState<BluetoothDevice[]>([]);
   const [selected, setSelected] = useState<BluetoothDevice | null>(null);
@@ -40,7 +39,7 @@ export default function RelayScreen() {
 
   const refreshStatus = useCallback(async () => {
     const enabled = await isBluetoothEnabled();
-    setRelayActive(enabled);
+    setBluetoothOn(enabled);
     const count = await getPendingCount();
     setPendingCount(count);
     const name = await getRelayName();
@@ -131,7 +130,7 @@ export default function RelayScreen() {
 
       if (list.length === 0) {
         setStatusBanner({
-          text: 'No relay devices found. Make sure the other phone has tapped "Start Relay Listener" (it broadcasts as RESQNET-XXXX).',
+          text: 'No relay devices found yet. Make sure the other phone tapped "Start Relay Listener" (it broadcasts as RESQNET-XXXX).',
           type: 'info',
         });
       } else {
@@ -216,7 +215,7 @@ export default function RelayScreen() {
   return (
     <LinearGradient colors={['#0a0f1f', '#0b152b', '#0a0f1f']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Relay Mode</Text>
+        <Text style={styles.title}>Bluetooth Relay</Text>
         <Text style={styles.subtitle}>
           Direct emergency mesh relay. Keep this screen open to transfer SOS reports from offline devices to online field relays.
         </Text>
@@ -235,10 +234,10 @@ export default function RelayScreen() {
           )}
 
           <View style={styles.statusRow}>
-            <View style={[styles.statusDot, { backgroundColor: relayActive ? '#22c55e' : '#ef4444' }]} />
-            <Text style={styles.statusText}>{relayActive ? 'Relay Active' : 'Relay Off'}</Text>
+            <View style={[styles.statusDot, { backgroundColor: bluetoothOn ? '#22c55e' : '#ef4444' }]} />
+            <Text style={styles.statusText}>{bluetoothOn ? 'Bluetooth On' : 'Bluetooth Off'}</Text>
             <View style={[styles.statusDot, { backgroundColor: isConnected ? '#22c55e' : '#ef4444' }]} />
-            <Text style={styles.statusText}>{isConnected ? 'Internet Connected' : 'Offline Mode'}</Text>
+            <Text style={styles.statusText}>{isConnected ? 'Internet Connected' : 'No Internet'}</Text>
           </View>
 
           <View style={styles.listenerRow}>
@@ -258,11 +257,9 @@ export default function RelayScreen() {
                 {listenerState === 'idle' ? 'Start Relay Listener' : 'Stop Relay Listener'}
               </Text>
             </TouchableOpacity>
-            {isNativeBluetoothSupported() && (
-              <TouchableOpacity style={styles.buttonOutline} onPress={openBluetoothSettings}>
-                <Text style={styles.buttonOutlineText}>Bluetooth Settings</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity style={styles.buttonOutline} onPress={openBluetoothSettings}>
+              <Text style={styles.buttonOutlineText}>Bluetooth Settings</Text>
+            </TouchableOpacity>
           </View>
         </View>
 

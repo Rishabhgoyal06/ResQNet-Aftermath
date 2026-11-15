@@ -1,4 +1,4 @@
-import { NativeModules, PermissionsAndroid, Platform } from 'react-native';
+import { Linking, NativeModules, PermissionsAndroid, Platform } from 'react-native';
 import RNBluetoothClassic, { BluetoothDevice, BluetoothEventSubscription } from 'react-native-bluetooth-classic';
 import uuid from 'react-native-uuid';
 import type { QueuedSOSReport } from '@resqnet/shared-types';
@@ -119,7 +119,6 @@ export async function requestBluetoothPermissions(): Promise<boolean> {
 
 export async function ensureBluetoothEnabled(): Promise<boolean> {
   if (!isNativeBluetoothSupported()) {
-    // In Expo Go or when native module is missing, relay engine is always enabled
     return true;
   }
 
@@ -141,34 +140,47 @@ export async function ensureBluetoothEnabled(): Promise<boolean> {
     return true;
   } catch (err) {
     console.warn('ensureBluetoothEnabled error:', err);
-    return true; // Fall back to mesh relay
+    return true;
   }
 }
 
 export async function isBluetoothEnabled(): Promise<boolean> {
-  if (!isNativeBluetoothSupported()) {
-    // In Expo Go, relay engine is ready and active
-    return true;
-  }
-
-  try {
-    const hasPerms = await checkBluetoothPermissions();
-    if (!hasPerms) {
-      return true; // Don't falsely claim off before user triggers an action
+  if (isNativeBluetoothSupported()) {
+    try {
+      const hasPerms = await checkBluetoothPermissions();
+      if (hasPerms) {
+        return await RNBluetoothClassic.isBluetoothEnabled();
+      }
+    } catch {
+      // fallback to true
     }
-    return await RNBluetoothClassic.isBluetoothEnabled();
-  } catch (err) {
-    console.warn('isBluetoothEnabled check failed:', err);
-    return true;
   }
+  return true;
 }
 
-export function openBluetoothSettings(): void {
-  if (!isNativeBluetoothSupported()) return;
+export async function openBluetoothSettings(): Promise<void> {
+  if (Platform.OS === 'android') {
+    try {
+      await Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS');
+      return;
+    } catch (err) {
+      console.warn('sendIntent BLUETOOTH_SETTINGS failed:', err);
+    }
+  }
+
   try {
-    RNBluetoothClassic.openBluetoothSettings();
+    if (isNativeBluetoothSupported()) {
+      RNBluetoothClassic.openBluetoothSettings();
+      return;
+    }
   } catch {
-    // ignore
+    // fallback
+  }
+
+  try {
+    await Linking.openSettings();
+  } catch (err) {
+    console.warn('openSettings failed:', err);
   }
 }
 
@@ -245,7 +257,7 @@ async function queryMeshPeers(client: SupabaseClient, myRelayName: string): Prom
       resolve(Array.from(peers.values()));
     };
 
-    const timer = setTimeout(cleanup, 2200);
+    const timer = setTimeout(cleanup, 2500);
 
     tempChannel.on('broadcast', { event: 'relay_beacon' }, (msg) => {
       const payload = msg.payload as { name?: string; id?: string; address?: string };
@@ -260,7 +272,7 @@ async function queryMeshPeers(client: SupabaseClient, myRelayName: string): Prom
 
     tempChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        // Ask all active relay listeners to beacon back
+        // Broadcast inquiry so any active listener responds
         await tempChannel.send({
           type: 'broadcast',
           event: 'scan_query',
