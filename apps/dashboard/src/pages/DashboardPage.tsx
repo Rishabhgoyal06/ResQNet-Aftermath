@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const { reports: processedReports } = useProcessedSOS();
   const [showIntel, setShowIntel] = useState(false);
   const [layoutMode, setLayoutMode] = useState<'split' | 'map' | 'feed'>('split');
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
 
   const detailedAreaById = useMemo(() => {
     const map: Record<string, string> = {};
@@ -73,13 +74,15 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="dashboard-map">
-            <LiveMap reports={reports} detailedAreaById={detailedAreaById} />
+            <LiveMap reports={reports} selectedReportId={selectedReportId} onMarkerClick={(r) => setSelectedReportId(r.id)} detailedAreaById={detailedAreaById} />
           </div>
         </div>
 
         <div className="dashboard-feed-section">
           <SOSFeedTable
             reports={reports}
+            selectedReportId={selectedReportId}
+            onSelectReport={(r) => setSelectedReportId(r.id)}
             onMarkResolved={handleMarkResolved}
             detailedAreaById={detailedAreaById}
             headerAction={

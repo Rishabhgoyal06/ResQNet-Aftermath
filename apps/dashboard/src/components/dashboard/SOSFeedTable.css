@@ -134,6 +134,11 @@
   background: rgba(37, 99, 235, 0.08);
 }
 
+.feed-row--selected {
+  background: rgba(158, 184, 159, 0.2) !important;
+  box-shadow: inset 3px 0 0 #a7c9ab !important;
+}
+
 .feed-row--critical {
   background: rgba(255, 91, 91, 0.1) !important;
 }

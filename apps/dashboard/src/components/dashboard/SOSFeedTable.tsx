@@ -21,12 +21,21 @@ const STATUS_LABELS: Record<string, string> = {
 
 interface SOSFeedTableProps {
   reports: SOSReport[];
+  selectedReportId?: string | null;
+  onSelectReport?: (report: SOSReport) => void;
   onMarkResolved?: (id: string) => void;
   detailedAreaById?: Record<string, string | null | undefined>;
   headerAction?: React.ReactNode;
 }
 
-export default function SOSFeedTable({ reports, onMarkResolved, detailedAreaById, headerAction }: SOSFeedTableProps) {
+export default function SOSFeedTable({
+  reports,
+  selectedReportId,
+  onSelectReport,
+  onMarkResolved,
+  detailedAreaById,
+  headerAction,
+}: SOSFeedTableProps) {
   const { user } = useAuth();
   const role = user?.role || 'public';
   const canResolve = ['admin', 'official', 'ngo'].includes(role);
@@ -135,9 +144,11 @@ export default function SOSFeedTable({ reports, onMarkResolved, detailedAreaById
               return (
                 <Fragment key={report.id}>
                   <tr
+                    onClick={() => onSelectReport?.(report)}
+                    style={{ cursor: 'pointer' }}
                     className={`feed-row ${idx === 0 ? 'animate-slide-in' : ''} ${
                       report.severity >= 5 ? 'feed-row--critical' : ''
-                    } ${fresh ? 'feed-row--new' : ''}`}
+                    } ${fresh ? 'feed-row--new' : ''} ${selectedReportId === report.id ? 'feed-row--selected' : ''}`}
                   >
                     <td className="feed-td feed-td--time">
                       <div className="feed-time">

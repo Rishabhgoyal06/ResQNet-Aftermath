@@ -236,11 +236,12 @@
 
 .map-tactical-dot {
   cursor: pointer;
-  transition: transform 0.15s ease;
+  outline: none;
 }
 
-.map-tactical-dot:hover {
-  transform: scale(1.3);
+.map-tactical-dot--selected {
+  stroke: #ffffff !important;
+  stroke-width: 3px !important;
 }
 
 .map-tactical-ring {
@@ -249,11 +250,72 @@
 
 .map-cluster {
   cursor: pointer;
-  transition: transform 0.15s ease;
+  outline: none;
 }
 
-.map-cluster:hover {
-  transform: scale(1.15);
+.map-tactical-tooltip.leaflet-tooltip {
+  background: rgba(8, 19, 13, 0.96) !important;
+  border: 1px solid rgba(158, 184, 159, 0.45) !important;
+  border-radius: 10px !important;
+  padding: 8px 12px !important;
+  color: #e5ebe5 !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(12px) !important;
+  font-family: var(--font-family, system-ui, sans-serif) !important;
+  pointer-events: none !important;
+}
+
+.map-tactical-tooltip::before {
+  border-top-color: rgba(8, 19, 13, 0.96) !important;
+}
+
+.map-tooltip-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 240px;
+}
+
+.map-tooltip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.map-tooltip-category {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.map-tooltip-sev {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: #000000;
+  letter-spacing: 0.05em;
+}
+
+.map-tooltip-body {
+  font-size: 11px;
+  color: #c8d6c9;
+  line-height: 1.35;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.map-tooltip-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #728a75;
+  font-family: var(--mono-family, 'JetBrains Mono', monospace);
+  margin-top: 2px;
 }
 
 .map-cluster-label {

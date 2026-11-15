@@ -46,15 +46,28 @@ function MapController({ onMap }: { onMap: (map: L.Map) => void }) {
   return null;
 }
 
+function FlyToSelected({ selectedReport }: { selectedReport?: SOSReport | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!selectedReport) return;
+    map.setView([selectedReport.latitude, selectedReport.longitude], Math.max(map.getZoom(), 16), {
+      animate: true,
+      duration: 0.5,
+    });
+  }, [map, selectedReport]);
+  return null;
+}
+
 interface LiveMapProps {
   reports: SOSReport[];
+  selectedReportId?: string | null;
   onMarkerClick?: (report: SOSReport) => void;
   detailedAreaById?: Record<string, string | null | undefined>;
   className?: string;
   style?: React.CSSProperties;
 }
 
-export default function LiveMap({ reports, onMarkerClick, detailedAreaById, className, style }: LiveMapProps) {
+export default function LiveMap({ reports, selectedReportId, onMarkerClick, detailedAreaById, className, style }: LiveMapProps) {
   const [follow, setFollow] = useState(true);
   const [showResolved, setShowResolved] = useState(false);
   const [mapRef, setMapRef] = useState<L.Map | null>(null);
@@ -97,10 +110,18 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
     return showResolved ? reports : reports.filter((r) => r.status !== 'resolved');
   }, [reports, showResolved]);
 
-    const groupedReports = useMemo(() => {
+  const selectedReport = useMemo(() => {
+    if (!selectedReportId) return null;
+    return reports.find((r) => r.id === selectedReportId) || null;
+  }, [reports, selectedReportId]);
+
+  const groupedReports = useMemo(() => {
     const groups = new Map<string, SOSReport[]>();
     visibleReports.forEach((report) => {
-      const key = `${report.latitude},${report.longitude}`;
+      // Group nearby coordinates (~30 meters) to prevent zero-pixel overlaps
+      const latKey = (Math.round(report.latitude * 3500) / 3500).toFixed(4);
+      const lngKey = (Math.round(report.longitude * 3500) / 3500).toFixed(4);
+      const key = `${latKey},${lngKey}`;
       const list = groups.get(key) ?? [];
       list.push(report);
       groups.set(key, list);
@@ -114,26 +135,28 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
       | { type: 'cluster'; clusterKey: string; lat: number; lng: number; count: number }
     > = [];
     groupedReports.forEach((list, key) => {
-      if (list.length === 1 || expandedClusters.includes(key)) {
-        if (list.length === 1) {
-          plotted.push({
-            type: 'report',
-            report: list[0],
-            lat: list[0].latitude,
-            lng: list[0].longitude,
-            stackSize: 1,
-          });
-          return;
-        }
-        const baseRadius = 0.0007;
+      if (list.length === 1) {
+        plotted.push({
+          type: 'report',
+          report: list[0],
+          lat: list[0].latitude,
+          lng: list[0].longitude,
+          stackSize: 1,
+        });
+        return;
+      }
+
+      // If cluster is expanded OR list is 2 to 4 reports:
+      // Spread them in a clean circular rosette so they NEVER sit on top of each other!
+      if (expandedClusters.includes(key) || list.length <= 4) {
+        const spreadRadius = 0.00022; // ~24m separation
         list.forEach((report, index) => {
           const angle = (index / list.length) * Math.PI * 2;
-          const spread = baseRadius + 0.0001 * (index % 3);
           plotted.push({
             type: 'report',
             report,
-            lat: report.latitude + Math.cos(angle) * spread,
-            lng: report.longitude + Math.sin(angle) * spread,
+            lat: report.latitude + Math.cos(angle) * spreadRadius,
+            lng: report.longitude + Math.sin(angle) * spreadRadius,
             stackSize: list.length,
           });
         });
@@ -233,7 +256,8 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
           </>
         )}
         <AutoCenter points={plottedPoints} follow={follow} />
-                {plottedReports.map((item) => {
+        <FlyToSelected selectedReport={selectedReport} />
+        {plottedReports.map((item) => {
           if (item.type === 'cluster') {
             const radius = Math.min(18, 12 + Math.floor(item.count * 1.5));
             return (
@@ -266,22 +290,24 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
           const { report, lat, lng, stackSize } = item;
           const color = SEVERITY_COLORS[report.severity as SeverityLevel] || '#94a3b8';
           const isCritical = report.severity >= 4;
-          const isFresh = Boolean(recentReports[report.id] && Date.now() - recentReports[report.id] < 8000);
+          const isFresh = Boolean(recentReports[report.id] && Date.now() - recentReports[report.id] < 12000);
+          const isSelected = selectedReportId === report.id;
+          const baseRadius = isSelected ? 11 : isCritical ? 8.5 : 7;
 
           return (
             <Fragment key={report.id}>
-              {/* Tactical perimeter ring for high severity or fresh incidents */}
-              {(isCritical || isFresh) && (
+              {/* Tactical perimeter ring for selected, fresh, or critical incidents */}
+              {(isCritical || isFresh || isSelected) && (
                 <CircleMarker
                   key={`${report.id}-ring`}
                   center={[lat, lng]}
-                  radius={isFresh ? 15 : 13}
+                  radius={isSelected ? 16 : isFresh ? 14 : 12}
                   pathOptions={{
-                    color: isFresh ? '#7ae582' : color,
-                    fillColor: isFresh ? '#7ae582' : color,
-                    fillOpacity: 0.15,
-                    weight: 1.5,
-                    dashArray: '3, 3',
+                    color: isSelected ? '#ffffff' : isFresh ? '#7ae582' : color,
+                    fillColor: isSelected ? '#ffffff' : isFresh ? '#7ae582' : color,
+                    fillOpacity: isSelected ? 0.35 : 0.15,
+                    weight: isSelected ? 2 : 1.5,
+                    dashArray: isSelected ? undefined : '3, 3',
                     className: 'map-tactical-ring',
                   }}
                   interactive={false}
@@ -291,18 +317,60 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
               <CircleMarker
                 key={report.id}
                 center={[lat, lng]}
-                radius={isCritical ? 8 : 6}
+                radius={baseRadius}
                 pathOptions={{
-                  color: '#ffffff',
+                  color: isSelected ? '#ffffff' : '#f8fafc',
                   fillColor: color,
                   fillOpacity: report.status === 'resolved' ? 0.4 : 0.95,
-                  weight: 2,
-                  className: 'map-tactical-dot',
+                  weight: isSelected ? 3 : 2,
+                  className: `map-tactical-dot ${isSelected ? 'map-tactical-dot--selected' : ''}`,
                 }}
                 eventHandlers={{
-                  click: () => onMarkerClick?.(report),
+                  click: () => {
+                    onMarkerClick?.(report);
+                  },
+                  mouseover: (e) => {
+                    const marker = e.target;
+                    marker.setRadius(baseRadius + 3);
+                    marker.setStyle({ weight: 3, fillOpacity: 1 });
+                  },
+                  mouseout: (e) => {
+                    const marker = e.target;
+                    marker.setRadius(baseRadius);
+                    marker.setStyle({
+                      weight: isSelected ? 3 : 2,
+                      fillOpacity: report.status === 'resolved' ? 0.4 : 0.95,
+                    });
+                  },
                 }}
               >
+                {/* Instant Hover Tooltip Preview */}
+                <Tooltip
+                  direction="top"
+                  offset={[0, -10]}
+                  opacity={1}
+                  className="map-tactical-tooltip"
+                >
+                  <div className="map-tooltip-card">
+                    <div className="map-tooltip-head">
+                      <span className="map-tooltip-category">
+                        {CATEGORY_ICONS[report.category as SOSCategory] || '⚠️'} {report.category}
+                      </span>
+                      <span className="map-tooltip-sev" style={{ background: color }}>
+                        L{report.severity}
+                      </span>
+                    </div>
+                    <div className="map-tooltip-body">
+                      {report.message || 'Distress signal active'}
+                    </div>
+                    <div className="map-tooltip-footer">
+                      <span>👤 {report.name || 'Anonymous'}</span>
+                      <span>🕐 {formatTime(report.created_at)}</span>
+                    </div>
+                  </div>
+                </Tooltip>
+
+                {/* Full Click Popup */}
                 <Popup className="map-popup">
                   <div className="map-popup-content">
                     <div className="map-popup-title">
@@ -319,7 +387,7 @@ export default function LiveMap({ reports, onMarkerClick, detailedAreaById, clas
                     )}
                     {stackSize > 1 && (
                       <div className="map-popup-area">
-                        <span>Stack:</span> {stackSize} reports in this spot
+                        <span>Cluster:</span> {stackSize} reports in this vicinity
                       </div>
                     )}
                     {report.message && <p className="map-popup-message">{report.message}</p>}
