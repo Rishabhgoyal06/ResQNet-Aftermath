@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { BluetoothDevice } from 'react-native-bluetooth-classic';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -12,7 +12,7 @@ import {
   startRelayListener,
   stopRelayListener,
   openBluetoothSettings,
-  isNativeBluetoothSupported,
+  getDeviceId,
 } from '../services/relayService';
 import { getPendingCount } from '../services/offlineQueue';
 import { isSupabaseConfigured } from '../services/supabase';
@@ -26,7 +26,6 @@ interface StatusBannerData {
 
 export default function RelayScreen() {
   const { isConnected } = useNetworkStatus();
-  const [isNative, setIsNative] = useState(false);
   const [bluetoothOn, setBluetoothOn] = useState(false);
   const [listenerState, setListenerState] = useState<RelayState>('idle');
   const [devices, setDevices] = useState<BluetoothDevice[]>([]);
@@ -36,10 +35,9 @@ export default function RelayScreen() {
   const [sendBusy, setSendBusy] = useState(false);
   const [statusBanner, setStatusBanner] = useState<StatusBannerData | null>(null);
   const [hasConfig, setHasConfig] = useState(true);
+  const [localRelayName, setLocalRelayName] = useState('RESQNET-????');
 
   const refreshBluetooth = useCallback(async () => {
-    const native = isNativeBluetoothSupported();
-    setIsNative(native);
     const enabled = await isBluetoothEnabled();
     setBluetoothOn(enabled);
   }, []);
@@ -55,6 +53,8 @@ export default function RelayScreen() {
     (async () => {
       const configured = await isSupabaseConfigured();
       setHasConfig(configured);
+      const devId = await getDeviceId();
+      setLocalRelayName(`RESQNET-${devId.slice(0, 4).toUpperCase()}`);
     })();
     return () => {
       stopRelayListener();
@@ -65,26 +65,25 @@ export default function RelayScreen() {
     setStatusBanner(null);
     try {
       setListenerState('listening');
-      await startRelayListener((status) => {
+      const assignedName = await startRelayListener((status) => {
         if (status === 'connected') setListenerState('connected');
         if (status === 'listening') setListenerState('listening');
       });
+      setLocalRelayName(assignedName);
       await refreshBluetooth();
       setStatusBanner({
-        text: isNative
-          ? 'Bluetooth RFCOMM Listener active: waiting for offline devices...'
-          : 'Mesh Relay Listener active: monitoring for incoming distress packets.',
+        text: `Relay Listener active! Broadcasting as "${assignedName}". Keep this screen open on the online device.`,
         type: 'success',
       });
     } catch (err: unknown) {
       setListenerState('idle');
-      const msg = err instanceof Error ? err.message : 'Bluetooth not available. Enable Bluetooth and try again.';
+      const msg = err instanceof Error ? err.message : 'Bluetooth unavailable. Please enable Bluetooth and grant permissions.';
       setStatusBanner({
         text: msg,
         type: 'error',
       });
     }
-  }, [isNative, refreshBluetooth]);
+  }, [refreshBluetooth]);
 
   const handleStopListener = useCallback(async () => {
     await stopRelayListener();
@@ -95,25 +94,13 @@ export default function RelayScreen() {
     });
   }, []);
 
-  const handleOpenSettings = useCallback(() => {
-    if (isNative) {
-      openBluetoothSettings();
-    } else {
-      Alert.alert(
-        'Mesh Relay Active (Expo Go)',
-        'ResQNet is running in Expo Go mesh mode. Bluetooth Classic RFCOMM hardware drivers require a standalone APK build. Mesh relay is fully functional!',
-        [{ text: 'OK' }]
-      );
-    }
-  }, [isNative]);
-
   const handleScan = useCallback(async () => {
     setScanBusy(true);
     setStatusBanner(null);
     const enabled = await ensureBluetoothEnabled();
-    if (!enabled && isNative) {
+    if (!enabled) {
       setStatusBanner({
-        text: 'Bluetooth is turned off in Android settings. Please enable it first.',
+        text: 'Bluetooth is off or permissions not granted. Please enable Bluetooth and allow nearby device permissions.',
         type: 'error',
       });
       setScanBusy(false);
@@ -124,31 +111,69 @@ export default function RelayScreen() {
       const paired = await getPairedDevices();
       const discovered = await discoverRelayDevices();
       const merged = new Map<string, BluetoothDevice>();
-      paired.forEach((device) => merged.set(device.address ?? device.id, device));
-      discovered.forEach((device) => merged.set(device.address ?? device.id, device));
+
+      paired.forEach((device) => {
+        const key = device.address ?? device.id;
+        if (key) merged.set(key, device);
+      });
+      discovered.forEach((device) => {
+        const key = device.address ?? device.id;
+        if (key) merged.set(key, device);
+      });
+
       const list = Array.from(merged.values());
+
+      // Sort RESQNET devices to the top
+      list.sort((a, b) => {
+        const aName = (a.name || '').toUpperCase();
+        const bName = (b.name || '').toUpperCase();
+        const aIsResq = aName.startsWith('RESQNET');
+        const bIsResq = bName.startsWith('RESQNET');
+        if (aIsResq && !bIsResq) return -1;
+        if (!aIsResq && bIsResq) return 1;
+        return aName.localeCompare(bName);
+      });
+
       setDevices(list);
-      setSelected(list[0] ?? null);
-      if (list.length > 0) {
+
+      // Auto-select first RESQNET device if found
+      const resq = list.find((d) => (d.name || '').toUpperCase().startsWith('RESQNET'));
+      setSelected(resq || list[0] || null);
+
+      if (list.length === 0) {
         setStatusBanner({
-          text: `Discovered ${list.length} relay node(s) nearby.`,
+          text: 'No Bluetooth devices found yet. Ensure the other phone has tapped "Start Relay Listener" and is discoverable.',
           type: 'info',
         });
+      } else {
+        const resqCount = list.filter((d) => (d.name || '').toUpperCase().startsWith('RESQNET')).length;
+        if (resqCount > 0) {
+          setStatusBanner({
+            text: `Discovered ${resqCount} active ResQNet relay device(s)!`,
+            type: 'success',
+          });
+        } else {
+          setStatusBanner({
+            text: `Found ${list.length} Bluetooth device(s). Make sure the online phone tapped "Start Relay Listener" (it renames to RESQNET-XXXX).`,
+            type: 'info',
+          });
+        }
       }
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Discovery failed';
       setStatusBanner({
-        text: 'Failed to scan for relay nodes. Please try again.',
+        text: `Scan failed: ${msg}`,
         type: 'error',
       });
     } finally {
       setScanBusy(false);
     }
-  }, [isNative]);
+  }, []);
 
   const handleSend = useCallback(async () => {
     if (!selected) {
       setStatusBanner({
-        text: 'Select a relay node first from the list.',
+        text: 'Select a relay device first from the list.',
         type: 'error',
       });
       return;
@@ -160,11 +185,13 @@ export default function RelayScreen() {
       });
       return;
     }
+
     setSendBusy(true);
     setStatusBanner({
-      text: `Transmitting pending SOS to ${selected.name || 'relay node'}...`,
+      text: `Connecting to ${selected.name || selected.address} and transmitting pending SOS reports...`,
       type: 'info',
     });
+
     try {
       const result = await sendPendingToDevice(selected);
       await refreshPending();
@@ -175,18 +202,19 @@ export default function RelayScreen() {
         });
       } else if (result.acked > 0) {
         setStatusBanner({
-          text: `Delivered ${result.acked}/${result.sent} SOS reports to relay! Synced live to ResQNet Command Center.`,
+          text: `Delivered ${result.acked}/${result.sent} SOS reports to ${selected.name || 'relay'}! Forwarded to ResQNet Command Center.`,
           type: 'success',
         });
       } else {
         setStatusBanner({
-          text: `Attempted relay transmission of ${result.sent} report(s). Relay gateway is currently offline or unreachable.`,
+          text: `Sent ${result.sent} report(s), but did not receive confirmation ack from relay device.`,
           type: 'error',
         });
       }
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Transmission failed';
       setStatusBanner({
-        text: 'Failed to transmit reports. Ensure the relay device is nearby and active.',
+        text: msg,
         type: 'error',
       });
     } finally {
@@ -197,24 +225,18 @@ export default function RelayScreen() {
   return (
     <LinearGradient colors={['#0a0f1f', '#0b152b', '#0a0f1f']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Bluetooth Relay</Text>
-          <View style={[styles.modePill, isNative ? styles.modePillNative : styles.modePillMesh]}>
-            <Text style={styles.modePillText}>
-              {isNative ? '⚡ HARDWARE RFCOMM' : '🌐 MESH ENGINE (EXPO GO)'}
-            </Text>
-          </View>
-        </View>
+        <Text style={styles.title}>Bluetooth Relay</Text>
         <Text style={styles.subtitle}>
-          Foreground mesh relay. Enables offline emergency SOS forwarding between nearby devices and responders.
+          Direct Bluetooth mesh relay. Keep this screen open while transferring emergency reports between offline and online devices.
         </Text>
 
         {/* RECEIVER CARD */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Receiver Mode (Online Device / Relay Node)</Text>
+          <Text style={styles.cardTitle}>Receiver Mode (Online Device)</Text>
           <Text style={styles.cardSubtitle}>
-            Use on a phone with internet or vehicle gateway to receive SOS packets and forward to ResQNet Command Center.
+            Use on the phone that has internet. It renames itself to {localRelayName} and forwards incoming SOS reports to Supabase.
           </Text>
+
           {!hasConfig && (
             <View style={styles.bannerWarning}>
               <Text style={styles.bannerWarningText}>Supabase not configured. Set it in Supabase Setup first.</Text>
@@ -223,20 +245,16 @@ export default function RelayScreen() {
 
           <View style={styles.statusRow}>
             <View style={[styles.statusDot, { backgroundColor: bluetoothOn ? '#22c55e' : '#ef4444' }]} />
-            <Text style={styles.statusText}>
-              {isNative
-                ? (bluetoothOn ? 'Bluetooth Radio On' : 'Bluetooth Radio Off')
-                : 'Relay Engine Ready'}
-            </Text>
+            <Text style={styles.statusText}>{bluetoothOn ? 'Bluetooth On' : 'Bluetooth Off'}</Text>
             <View style={[styles.statusDot, { backgroundColor: isConnected ? '#22c55e' : '#ef4444' }]} />
             <Text style={styles.statusText}>{isConnected ? 'Internet Connected' : 'No Internet'}</Text>
           </View>
 
           <View style={styles.listenerRow}>
             <Text style={styles.listenerLabel}>
-              {listenerState === 'idle' && 'Listener stopped'}
-              {listenerState === 'listening' && (isNative ? 'Waiting for incoming RFCOMM connections...' : 'Listening for Mesh & Field Relay packets...')}
-              {listenerState === 'connected' && 'Relay connected & active'}
+              {listenerState === 'idle' && `Listener stopped (${localRelayName})`}
+              {listenerState === 'listening' && `Listening for connections as ${localRelayName}...`}
+              {listenerState === 'connected' && `Relay connected to peer! Forwarding SOS...`}
             </Text>
           </View>
 
@@ -249,7 +267,7 @@ export default function RelayScreen() {
                 {listenerState === 'idle' ? 'Start Relay Listener' : 'Stop Relay Listener'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonOutline} onPress={handleOpenSettings}>
+            <TouchableOpacity style={styles.buttonOutline} onPress={openBluetoothSettings}>
               <Text style={styles.buttonOutlineText}>Bluetooth Settings</Text>
             </TouchableOpacity>
           </View>
@@ -259,11 +277,11 @@ export default function RelayScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Sender Mode (Offline Device)</Text>
           <Text style={styles.cardSubtitle}>
-            Use on a phone without internet. Sends queued SOS reports to nearby responders or relay nodes.
+            Use on the phone without internet. Scans for the online phone ({localRelayName.split('-')[0]}-XXXX) and transmits queued SOS reports over Bluetooth.
           </Text>
 
           <View style={styles.queueRow}>
-            <Text style={styles.queueLabel}>Pending SOS Reports</Text>
+            <Text style={styles.queueLabel}>Pending SOS</Text>
             <Text style={[styles.queueValue, pendingCount > 0 && styles.queueValuePending]}>{pendingCount}</Text>
           </View>
 
@@ -272,24 +290,34 @@ export default function RelayScreen() {
           </TouchableOpacity>
 
           {devices.length === 0 ? (
-            <Text style={styles.emptyText}>No relays found yet. Tap &apos;Scan for Relays&apos; to discover nearby nodes.</Text>
+            <Text style={styles.emptyText}>
+              No Bluetooth devices found yet. Tap &apos;Scan for Relays&apos;. Ensure the other phone has tapped &apos;Start Relay Listener&apos;.
+            </Text>
           ) : (
             <View style={styles.deviceList}>
               {devices.map((device) => {
                 const key = device.address ?? device.id;
                 const active = selected?.address === device.address && selected?.id === device.id;
-                const isMesh = key.startsWith('MESH:');
+                const isResq = (device.name || '').toUpperCase().startsWith('RESQNET');
                 return (
                   <TouchableOpacity
                     key={key}
-                    style={[styles.deviceItem, active && styles.deviceItemActive]}
+                    style={[
+                      styles.deviceItem,
+                      active && styles.deviceItemActive,
+                      isResq && styles.deviceItemResq,
+                    ]}
                     onPress={() => setSelected(device)}
                   >
                     <View style={styles.deviceHeader}>
-                      <Text style={styles.deviceName}>{device.name || 'Unknown Device'}</Text>
-                      <View style={[styles.tagPill, isMesh ? styles.tagPillMesh : styles.tagPillBt]}>
-                        <Text style={styles.tagPillText}>{isMesh ? 'TACTICAL MESH' : 'RFCOMM BT'}</Text>
-                      </View>
+                      <Text style={[styles.deviceName, isResq && styles.deviceNameResq]}>
+                        {device.name || 'Unnamed Bluetooth Device'}
+                      </Text>
+                      {isResq && (
+                        <View style={styles.tagPillResq}>
+                          <Text style={styles.tagPillText}>RESQNET RELAY</Text>
+                        </View>
+                      )}
                     </View>
                     <Text style={styles.deviceMeta}>{device.address ?? device.id}</Text>
                   </TouchableOpacity>
@@ -299,15 +327,19 @@ export default function RelayScreen() {
           )}
 
           <TouchableOpacity
-            style={[styles.button, (sendBusy || pendingCount === 0) && styles.buttonDisabled]}
+            style={[styles.button, (sendBusy || pendingCount === 0 || !selected) && styles.buttonDisabled]}
             onPress={handleSend}
-            disabled={sendBusy || pendingCount === 0}
+            disabled={sendBusy || pendingCount === 0 || !selected}
           >
             {sendBusy ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.buttonText}>
-                {pendingCount > 0 ? `Send ${pendingCount} Pending SOS to Relay` : 'No Pending SOS'}
+                {pendingCount > 0
+                  ? selected
+                    ? `Send ${pendingCount} SOS to ${selected.name || 'Selected Device'}`
+                    : 'Select a Relay Device'
+                  : 'No Pending SOS'}
               </Text>
             )}
           </TouchableOpacity>
@@ -333,17 +365,6 @@ export default function RelayScreen() {
             </Text>
           </View>
         )}
-
-        {/* INFO NOTICE */}
-        {!isNative && (
-          <View style={styles.expoNotice}>
-            <Text style={styles.expoNoticeTitle}>💡 Expo Go Mesh Relay Active</Text>
-            <Text style={styles.expoNoticeText}>
-              You are running inside Expo Go. ResQNet P2P Mesh Relay is active to verify end-to-end SOS queuing, relay handoff, and live dashboard ingestion.
-              For direct RFCOMM radio between disconnected phones without internet, compile the standalone Android APK (`npx expo run:android` or EAS build).
-            </Text>
-          </View>
-        )}
       </ScrollView>
     </LinearGradient>
   );
@@ -358,37 +379,10 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingBottom: 40,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
   title: {
     fontSize: 24,
     fontWeight: '900',
     color: '#f8fafc',
-    letterSpacing: 0.5,
-  },
-  modePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  modePillNative: {
-    backgroundColor: '#064e3b',
-    borderColor: '#059669',
-  },
-  modePillMesh: {
-    backgroundColor: '#0c4a6e',
-    borderColor: '#0284c7',
-  },
-  modePillText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#f0fdf4',
     letterSpacing: 0.5,
   },
   subtitle: {
@@ -452,7 +446,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#16a34a',
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   buttonText: {
     color: '#fff',
@@ -508,6 +502,9 @@ const styles = StyleSheet.create({
     borderColor: '#38bdf8',
     backgroundColor: '#0f2340',
   },
+  deviceItemResq: {
+    borderColor: '#16a34a',
+  },
   deviceHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -520,21 +517,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     flex: 1,
   },
-  tagPill: {
-    paddingHorizontal: 6,
+  deviceNameResq: {
+    color: '#86efac',
+    fontWeight: '800',
+  },
+  tagPillResq: {
+    backgroundColor: '#064e3b',
+    paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
-  },
-  tagPillMesh: {
-    backgroundColor: '#064e3b',
-  },
-  tagPillBt: {
-    backgroundColor: '#1e3a8a',
+    borderWidth: 1,
+    borderColor: '#059669',
   },
   tagPillText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '800',
-    color: '#f8fafc',
+    color: '#f0fdf4',
+    letterSpacing: 0.5,
   },
   deviceMeta: {
     color: '#8aa0c7',
@@ -584,23 +583,5 @@ const styles = StyleSheet.create({
     color: '#fdba74',
     fontSize: 11,
     fontWeight: '700',
-  },
-  expoNotice: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    padding: 14,
-    gap: 6,
-  },
-  expoNoticeTitle: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  expoNoticeText: {
-    color: '#64748b',
-    fontSize: 11,
-    lineHeight: 16,
   },
 });

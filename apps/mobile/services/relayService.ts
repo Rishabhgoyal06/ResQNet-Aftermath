@@ -1,4 +1,4 @@
-import { NativeModules, PermissionsAndroid, Platform } from 'react-native';
+import { PermissionsAndroid, Platform } from 'react-native';
 import RNBluetoothClassic, { BluetoothDevice, BluetoothEventSubscription } from 'react-native-bluetooth-classic';
 import uuid from 'react-native-uuid';
 import type { QueuedSOSReport } from '@resqnet/shared-types';
@@ -10,8 +10,6 @@ const DEVICE_ID_KEY = 'resqnet_device_id';
 const RELAY_MAGIC = 'RESQNET1';
 const RELAY_DELIMITER = '\n';
 const RELAY_SERVICE_NAME = 'ResQNet Relay';
-
-export type RelayEngineMode = 'native' | 'expo_mesh';
 
 type RelayMessage =
   | {
@@ -31,35 +29,32 @@ type RelayMessage =
 let listenerDevice: BluetoothDevice | null = null;
 let listenerSubscription: BluetoothEventSubscription | null = null;
 let listening = false;
-let meshListenerTimer: ReturnType<typeof setInterval> | null = null;
 
-/**
- * Checks whether native RNBluetoothClassic module is linked/available.
- * In Expo Go, third-party native C++/Java modules are not bundled,
- * so this returns false and the app switches to Expo Mesh fallback mode.
- */
-export function isNativeBluetoothSupported(): boolean {
-  try {
-    return Boolean(
-      NativeModules &&
-      NativeModules.RNBluetoothClassic &&
-      typeof RNBluetoothClassic?.isBluetoothAvailable === 'function'
-    );
-  } catch {
-    return false;
-  }
-}
-
-export function getRelayEngineMode(): RelayEngineMode {
-  return isNativeBluetoothSupported() ? 'native' : 'expo_mesh';
-}
-
-async function getDeviceId(): Promise<string> {
+export async function getDeviceId(): Promise<string> {
   const existing = await kvStorage.getItem(DEVICE_ID_KEY);
   if (existing) return existing;
   const fresh = uuid.v4() as string;
   await kvStorage.setItem(DEVICE_ID_KEY, fresh);
   return fresh;
+}
+
+export async function checkBluetoothPermissions(): Promise<boolean> {
+  if (Platform.OS !== 'android') return true;
+  try {
+    const apiLevel = typeof Platform.Version === 'number' ? Platform.Version : parseInt(String(Platform.Version), 10);
+    const androidPerms = PermissionsAndroid.PERMISSIONS as Record<string, string | undefined>;
+    if (apiLevel >= 31) {
+      if (!androidPerms.BLUETOOTH_CONNECT || !androidPerms.BLUETOOTH_SCAN) return true;
+      const connect = await PermissionsAndroid.check(androidPerms.BLUETOOTH_CONNECT);
+      const scan = await PermissionsAndroid.check(androidPerms.BLUETOOTH_SCAN);
+      return connect && scan;
+    } else {
+      if (!androidPerms.ACCESS_FINE_LOCATION) return true;
+      return await PermissionsAndroid.check(androidPerms.ACCESS_FINE_LOCATION);
+    }
+  } catch {
+    return false;
+  }
 }
 
 export async function requestBluetoothPermissions(): Promise<boolean> {
@@ -68,65 +63,79 @@ export async function requestBluetoothPermissions(): Promise<boolean> {
   try {
     const apiLevel = typeof Platform.Version === 'number' ? Platform.Version : parseInt(String(Platform.Version), 10);
     const androidPerms = PermissionsAndroid.PERMISSIONS as Record<string, string | undefined>;
-    const perms: string[] = [];
 
     if (apiLevel >= 31) {
-      // Android 12+ (API 31+): BLUETOOTH_SCAN, BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE
-      if (androidPerms.BLUETOOTH_SCAN) perms.push(androidPerms.BLUETOOTH_SCAN);
-      if (androidPerms.BLUETOOTH_CONNECT) perms.push(androidPerms.BLUETOOTH_CONNECT);
-      if (androidPerms.BLUETOOTH_ADVERTISE) perms.push(androidPerms.BLUETOOTH_ADVERTISE);
+      // Android 12+ (API 31+)
+      const toRequest: string[] = [];
+      if (androidPerms.BLUETOOTH_SCAN) toRequest.push(androidPerms.BLUETOOTH_SCAN);
+      if (androidPerms.BLUETOOTH_CONNECT) toRequest.push(androidPerms.BLUETOOTH_CONNECT);
+      if (androidPerms.BLUETOOTH_ADVERTISE) toRequest.push(androidPerms.BLUETOOTH_ADVERTISE);
+
+      if (toRequest.length === 0) return true;
+
+      const results = await PermissionsAndroid.requestMultiple(toRequest);
+      const scanGranted = !androidPerms.BLUETOOTH_SCAN || results[androidPerms.BLUETOOTH_SCAN] === PermissionsAndroid.RESULTS.GRANTED;
+      const connectGranted = !androidPerms.BLUETOOTH_CONNECT || results[androidPerms.BLUETOOTH_CONNECT] === PermissionsAndroid.RESULTS.GRANTED;
+
+      return scanGranted && connectGranted;
     } else {
-      // Android 11 or lower (API < 31): Location permissions required for Bluetooth scanning
-      if (androidPerms.ACCESS_FINE_LOCATION) perms.push(androidPerms.ACCESS_FINE_LOCATION);
-      if (androidPerms.ACCESS_COARSE_LOCATION) perms.push(androidPerms.ACCESS_COARSE_LOCATION);
+      // Android 11 or lower (API < 31)
+      if (!androidPerms.ACCESS_FINE_LOCATION) return true;
+      const result = await PermissionsAndroid.request(androidPerms.ACCESS_FINE_LOCATION, {
+        title: 'Bluetooth Scan Permission',
+        message: 'ResQNet requires location permission to discover nearby emergency relay devices via Bluetooth.',
+        buttonPositive: 'Allow',
+        buttonNegative: 'Deny',
+      });
+      return result === PermissionsAndroid.RESULTS.GRANTED;
     }
-
-    if (perms.length === 0) return true;
-
-    const results = await PermissionsAndroid.requestMultiple(perms);
-    return perms.every((perm) => results[perm] === PermissionsAndroid.RESULTS.GRANTED);
   } catch (err) {
-    console.warn('Bluetooth permission check error:', err);
+    console.warn('requestBluetoothPermissions error:', err);
     return false;
   }
 }
 
 export async function ensureBluetoothEnabled(): Promise<boolean> {
-  if (!isNativeBluetoothSupported()) {
-    // In Expo Go, native RFCOMM hardware driver is not available.
-    // Allow mesh relay engine to proceed seamlessly.
-    return true;
-  }
-
   try {
+    // 1. Request permissions FIRST so Android 12 does not throw SecurityException
+    const permsGranted = await requestBluetoothPermissions();
+    if (!permsGranted) {
+      return false;
+    }
+
+    // 2. Check if hardware is available
     const available = await RNBluetoothClassic.isBluetoothAvailable();
     if (!available) return false;
+
+    // 3. Check if enabled, and request system turn-on if disabled
     const enabled = await RNBluetoothClassic.isBluetoothEnabled();
     if (!enabled) {
       const requested = await RNBluetoothClassic.requestBluetoothEnabled();
       if (!requested) return false;
     }
-    return await requestBluetoothPermissions();
-  } catch {
+
+    return true;
+  } catch (err) {
+    console.error('ensureBluetoothEnabled error:', err);
     return false;
   }
 }
 
 export async function isBluetoothEnabled(): Promise<boolean> {
-  if (!isNativeBluetoothSupported()) {
-    // In Expo Go, native Bluetooth driver is not compiled in.
-    // Return true so UI does not show false "Bluetooth Off" error.
-    return true;
-  }
   try {
+    const hasPerms = await checkBluetoothPermissions();
+    if (!hasPerms) {
+      const granted = await requestBluetoothPermissions();
+      if (!granted) return false;
+    }
     return await RNBluetoothClassic.isBluetoothEnabled();
-  } catch {
+  } catch (err) {
+    console.warn('isBluetoothEnabled check failed:', err);
     return false;
   }
 }
 
 export function openBluetoothSettings(): void {
-  if (!isNativeBluetoothSupported()) return;
   try {
     RNBluetoothClassic.openBluetoothSettings();
   } catch {
@@ -135,77 +144,31 @@ export function openBluetoothSettings(): void {
 }
 
 export async function getPairedDevices(): Promise<BluetoothDevice[]> {
-  if (isNativeBluetoothSupported()) {
-    try {
-      return await RNBluetoothClassic.getBondedDevices();
-    } catch {
-      return [];
+  try {
+    const hasPerms = await checkBluetoothPermissions();
+    if (!hasPerms) {
+      const granted = await requestBluetoothPermissions();
+      if (!granted) return [];
     }
+    return await RNBluetoothClassic.getBondedDevices();
+  } catch (err) {
+    console.warn('getPairedDevices error:', err);
+    return [];
   }
-
-  // Expo Go mesh fallback
-  return [
-    {
-      id: 'mesh-ndrf-alpha',
-      address: 'MESH:NDRF-TACTICAL-ALPHA',
-      name: '🟢 NDRF Tactical Mobile Relay (Unit 04)',
-      bonded: true,
-      connect: async () => true,
-      disconnect: async () => true,
-      isConnected: async () => true,
-      write: async () => true,
-      onDataReceived: () => ({ remove: () => {} }),
-    } as unknown as BluetoothDevice,
-  ];
 }
 
 export async function discoverRelayDevices(): Promise<BluetoothDevice[]> {
-  if (isNativeBluetoothSupported()) {
-    try {
-      return await RNBluetoothClassic.startDiscovery();
-    } catch {
-      return [];
+  try {
+    const hasPerms = await checkBluetoothPermissions();
+    if (!hasPerms) {
+      const granted = await requestBluetoothPermissions();
+      if (!granted) return [];
     }
+    return await RNBluetoothClassic.startDiscovery();
+  } catch (err) {
+    console.warn('discoverRelayDevices error:', err);
+    return [];
   }
-
-  // Simulated scan delay to feel responsive
-  await new Promise((resolve) => setTimeout(resolve, 600));
-
-  return [
-    {
-      id: 'mesh-ndrf-alpha',
-      address: 'MESH:NDRF-TACTICAL-ALPHA',
-      name: '🟢 NDRF Tactical Mobile Relay (Unit 04)',
-      bonded: true,
-      connect: async () => true,
-      disconnect: async () => true,
-      isConnected: async () => true,
-      write: async () => true,
-      onDataReceived: () => ({ remove: () => {} }),
-    } as unknown as BluetoothDevice,
-    {
-      id: 'mesh-gateway-hq',
-      address: 'MESH:HQ-RELAY-GATEWAY',
-      name: '🟢 ResQNet Field Command Gateway (HQ)',
-      bonded: false,
-      connect: async () => true,
-      disconnect: async () => true,
-      isConnected: async () => true,
-      write: async () => true,
-      onDataReceived: () => ({ remove: () => {} }),
-    } as unknown as BluetoothDevice,
-    {
-      id: 'mesh-civilian-peer',
-      address: 'MESH:CIVILIAN-PEER-HOP',
-      name: '🟢 Nearby ResQNet Survivor Node (Direct Hop)',
-      bonded: false,
-      connect: async () => true,
-      disconnect: async () => true,
-      isConnected: async () => true,
-      write: async () => true,
-      onDataReceived: () => ({ remove: () => {} }),
-    } as unknown as BluetoothDevice,
-  ];
 }
 
 function safeParseMessage(data: string): RelayMessage | null {
@@ -254,93 +217,70 @@ export async function forwardReportToSupabase(report: QueuedSOSReport): Promise<
   }
 }
 
-export async function startRelayListener(onStatus?: (status: 'listening' | 'connected') => void): Promise<void> {
-  if (listening) return;
+export async function startRelayListener(onStatus?: (status: 'listening' | 'connected') => void): Promise<string> {
+  const enabled = await ensureBluetoothEnabled();
+  if (!enabled) {
+    throw new Error('Bluetooth unavailable. Please grant permissions and ensure Bluetooth is turned on.');
+  }
 
-  if (isNativeBluetoothSupported()) {
-    const enabled = await ensureBluetoothEnabled();
-    if (!enabled) {
-      throw new Error('Bluetooth unavailable. Please enable Bluetooth in Settings.');
-    }
+  const deviceId = await getDeviceId();
+  const adapterName = `RESQNET-${deviceId.slice(0, 4).toUpperCase()}`;
 
-    listening = true;
-    onStatus?.('listening');
+  if (listening) {
+    return adapterName;
+  }
 
-    try {
-      const deviceId = await getDeviceId();
-      await RNBluetoothClassic.setBluetoothAdapterName(`RESQNET-${deviceId.slice(0, 4).toUpperCase()}`);
-    } catch {
-      // ignore rename errors
-    }
+  listening = true;
+  onStatus?.('listening');
 
-    void RNBluetoothClassic.accept({
-      connectionType: 'delimited',
-      delimiter: RELAY_DELIMITER,
-      serviceName: RELAY_SERVICE_NAME,
-    })
-      .then((device) => {
-        if (!listening) {
-          device.disconnect();
-          return;
-        }
-        listenerDevice = device;
-        listenerSubscription?.remove();
-        listenerSubscription = device.onDataReceived((event) => {
-          const message = safeParseMessage(event.data);
-          if (!message || message.type !== 'report') return;
-          void (async () => {
-            const forwarded = await forwardReportToSupabase(message.report);
-            if (!forwarded || !listenerDevice) return;
-            const reply: RelayMessage = {
-              magic: RELAY_MAGIC,
-              type: 'ack',
-              reportId: message.report.id,
-              from: await getDeviceId(),
-              to: message.from,
-            };
-            await listenerDevice.write(JSON.stringify(reply) + RELAY_DELIMITER);
-          })();
-        });
-        onStatus?.('connected');
-      })
-      .catch((error) => {
-        console.error('Relay listener failed', error);
-      });
-  } else {
-    // Expo Go / Mesh Mode
-    listening = true;
-    onStatus?.('listening');
+  try {
+    await RNBluetoothClassic.setBluetoothAdapterName(adapterName);
+    console.log('Bluetooth adapter renamed to', adapterName);
+  } catch (err) {
+    console.warn('Bluetooth adapter rename warning:', err);
+  }
 
-    // Run active relay loop to forward any pending reports
-    if (meshListenerTimer) clearInterval(meshListenerTimer);
-    meshListenerTimer = setInterval(async () => {
+  void RNBluetoothClassic.accept({
+    connectionType: 'delimited',
+    delimiter: RELAY_DELIMITER,
+    serviceName: RELAY_SERVICE_NAME,
+  })
+    .then((device) => {
       if (!listening) {
-        if (meshListenerTimer) clearInterval(meshListenerTimer);
+        device.disconnect();
         return;
       }
-      const pending = await getUnsyncedReports();
-      if (pending.length > 0) {
-        onStatus?.('connected');
-        for (const report of pending) {
-          const ok = await forwardReportToSupabase(report);
-          if (ok) {
-            await markAsSynced(report.id);
-          }
-        }
-        setTimeout(() => {
-          if (listening) onStatus?.('listening');
-        }, 1500);
-      }
-    }, 3000);
-  }
+      listenerDevice = device;
+      listenerSubscription?.remove();
+      listenerSubscription = device.onDataReceived((event) => {
+        const message = safeParseMessage(event.data);
+        if (!message || message.type !== 'report') return;
+        void (async () => {
+          const forwarded = await forwardReportToSupabase(message.report);
+          if (!forwarded || !listenerDevice) return;
+          const reply: RelayMessage = {
+            magic: RELAY_MAGIC,
+            type: 'ack',
+            reportId: message.report.id,
+            from: await getDeviceId(),
+            to: message.from,
+          };
+          await listenerDevice.write(JSON.stringify(reply) + RELAY_DELIMITER);
+        })();
+      });
+      onStatus?.('connected');
+    })
+    .catch((error) => {
+      console.error('Relay listener accept error:', error);
+      listening = false;
+      onStatus?.('listening');
+    });
+
+  return adapterName;
 }
 
 export async function stopRelayListener(): Promise<void> {
   listening = false;
-  if (meshListenerTimer) {
-    clearInterval(meshListenerTimer);
-    meshListenerTimer = null;
-  }
   listenerSubscription?.remove();
   listenerSubscription = null;
 
@@ -353,59 +293,66 @@ export async function stopRelayListener(): Promise<void> {
   }
   listenerDevice = null;
 
-  if (isNativeBluetoothSupported()) {
-    try {
-      await RNBluetoothClassic.cancelAccept();
-    } catch {
-      // ignore
-    }
+  try {
+    await RNBluetoothClassic.cancelAccept();
+  } catch {
+    // ignore
   }
 }
 
 export async function sendPendingToDevice(device: BluetoothDevice): Promise<{ sent: number; acked: number }> {
+  const enabled = await ensureBluetoothEnabled();
+  if (!enabled) {
+    throw new Error('Bluetooth is disabled or permissions not granted.');
+  }
+
   const pending = await getUnsyncedReports();
   if (pending.length === 0) {
     return { sent: 0, acked: 0 };
   }
 
-  // Native Bluetooth Mode
-  if (isNativeBluetoothSupported() && !device.address?.startsWith('MESH:')) {
-    const enabled = await ensureBluetoothEnabled();
-    if (!enabled) {
-      return { sent: 0, acked: 0 };
-    }
+  const deviceId = await getDeviceId();
+  const connectOptions = {
+    connectionType: 'delimited' as const,
+    delimiter: RELAY_DELIMITER,
+    charset: 'utf-8',
+    serviceName: RELAY_SERVICE_NAME,
+  };
 
-    const deviceId = await getDeviceId();
-    const connectOptions = {
-      connectionType: 'delimited' as const,
-      delimiter: RELAY_DELIMITER,
-      charset: 'utf-8',
-      serviceName: RELAY_SERVICE_NAME,
-    };
+  let connected = false;
+  try {
+    connected = await device.connect(connectOptions);
+  } catch (e) {
+    console.warn('Initial connect failed, trying insecure socket...', e);
+  }
 
-    let connected = await device.connect(connectOptions);
-    if (!connected) {
+  if (!connected) {
+    try {
       connected = await device.connect({ ...connectOptions, secureSocket: false });
+    } catch (e2) {
+      console.warn('Insecure connect failed:', e2);
     }
+  }
 
-    if (!connected) {
-      return { sent: 0, acked: 0 };
+  if (!connected) {
+    throw new Error(`Failed to connect to ${device.name || device.address}. Make sure 'Start Relay Listener' is active on that device and it is nearby.`);
+  }
+
+  const ackWaiters = new Map<string, (acked: boolean) => void>();
+  const subscription = device.onDataReceived((event) => {
+    const message = safeParseMessage(event.data);
+    if (!message || message.type !== 'ack') return;
+    const resolve = ackWaiters.get(message.reportId);
+    if (resolve) {
+      resolve(true);
+      ackWaiters.delete(message.reportId);
     }
+  });
 
-    const ackWaiters = new Map<string, (acked: boolean) => void>();
-    const subscription = device.onDataReceived((event) => {
-      const message = safeParseMessage(event.data);
-      if (!message || message.type !== 'ack') return;
-      const resolve = ackWaiters.get(message.reportId);
-      if (resolve) {
-        resolve(true);
-        ackWaiters.delete(message.reportId);
-      }
-    });
+  let sent = 0;
+  let acked = 0;
 
-    let sent = 0;
-    let acked = 0;
-
+  try {
     for (const report of pending) {
       const payload: RelayMessage = {
         magic: RELAY_MAGIC,
@@ -421,7 +368,7 @@ export async function sendPendingToDevice(device: BluetoothDevice): Promise<{ se
         const timer = setTimeout(() => {
           ackWaiters.delete(report.id);
           resolve(false);
-        }, 6000);
+        }, 8000);
         ackWaiters.set(report.id, () => {
           clearTimeout(timer);
           resolve(true);
@@ -433,24 +380,12 @@ export async function sendPendingToDevice(device: BluetoothDevice): Promise<{ se
         acked++;
       }
     }
-
+  } finally {
     subscription.remove();
-    await device.disconnect();
-
-    return { sent, acked };
-  }
-
-  // Expo Go / Mesh Mode:
-  // Forward pending reports through the relay bridge directly to Supabase
-  let sent = 0;
-  let acked = 0;
-
-  for (const report of pending) {
-    sent++;
-    const ok = await forwardReportToSupabase(report);
-    if (ok) {
-      await markAsSynced(report.id);
-      acked++;
+    try {
+      await device.disconnect();
+    } catch {
+      // ignore
     }
   }
 
